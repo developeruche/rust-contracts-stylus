@@ -1,4 +1,5 @@
-use std::marker::PhantomData;
+use alloc::{borrow::ToOwned, string::String, vec, vec::Vec};
+use core::marker::PhantomData;
 
 use alloy_primitives::{Address, U256};
 use alloy_sol_types::{sol, SolError};
@@ -202,5 +203,67 @@ where
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use alloy_primitives::U256;
+    use stylus_sdk::{
+        storage::{StorageMap, StorageType, StorageU256},
+        stylus_proc::{entrypoint, external, sol_storage},
+    };
+
+    use super::{Erc20, IErc20Metadata};
+
+    struct TokenMetadata;
+
+    pub const TOKEN_NAME: &'static str = "Token";
+    pub const TOKEN_SYMBOL: &'static str = "TKN";
+    pub const TOKEN_DECIMALS: u8 = 6;
+
+    impl IErc20Metadata for TokenMetadata {
+        const NAME: &'static str = TOKEN_NAME;
+        const SYMBOL: &'static str = TOKEN_SYMBOL;
+        const DECIMALS: u8 = TOKEN_DECIMALS;
+    }
+
+    sol_storage! {
+        struct Token {
+            #[borrow]
+            Erc20<TokenMetadata> erc20;
+        }
+    }
+
+    #[external]
+    #[inherit(Erc20<TokenMetadata>)]
+    impl Token {}
+
+    #[test]
+    fn init() {
+        let name = Erc20::<TokenMetadata>::name();
+        if let Ok(name) = name {
+            assert_eq!(TOKEN_NAME, name);
+        }
+
+        let expected_ts = U256::from(2);
+        let erc20 = Erc20::<TokenMetadata> {
+            _balances: unsafe { StorageMap::new(U256::ZERO, 0) },
+            _allowances: unsafe { StorageMap::new(U256::from(1), 0) },
+            _total_supply: unsafe { StorageU256::new(expected_ts, 0) },
+            metadata: core::marker::PhantomData,
+        };
+        let _contract = Token { erc20 };
+
+        // FIXME: Accessing storage breaks `cargo test` with the following:
+        //
+        // ```terminal
+        // dyld[54517]: missing symbol called
+        // ```
+        //
+        // let actual_ts = _contract.erc20.total_supply();
+        // if let Ok(actual_ts) = actual_ts {
+        //     assert_eq!(expected_ts, actual_ts);
+        // }
     }
 }
