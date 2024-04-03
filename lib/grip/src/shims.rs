@@ -74,6 +74,7 @@
 #![allow(clippy::missing_safety_doc)]
 use std::slice;
 
+use crate::context::get_msg_sender;
 use crate::storage::{read_bytes32, write_bytes32, STORAGE};
 use tiny_keccak::{Hasher, Keccak};
 
@@ -142,9 +143,6 @@ pub unsafe extern "C" fn storage_store_bytes32(
     STORAGE.lock().unwrap().insert(key, value);
 }
 
-/// Dummy msg sender set for tests.
-pub const MSG_SENDER: &[u8; 42] = b"0xDeaDbeefdEAdbeefdEadbEEFdeadbeEFdEaDbeeF";
-
 /// Gets the address of the account that called the program. For normal
 /// L2-to-L2 transactions the semantics are equivalent to that of the EVM's
 /// [`CALLER`] opcode, including in cases arising from [`DELEGATE_CALL`].
@@ -158,7 +156,7 @@ pub const MSG_SENDER: &[u8; 42] = b"0xDeaDbeefdEAdbeefdEadbEEFdeadbeEFdEaDbeeF";
 /// [aliasing]: https://developer.arbitrum.io/arbos/l1-to-l2-messaging#address-aliasing
 #[no_mangle]
 pub unsafe extern "C" fn msg_sender(sender: *mut u8) {
-    let addr = const_hex::const_decode_to_array::<20>(MSG_SENDER).unwrap();
+    let addr = get_msg_sender();
     std::ptr::copy(addr.as_ptr(), sender, 20);
 }
 

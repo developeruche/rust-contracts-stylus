@@ -250,6 +250,7 @@ dependencies = [
  "const-hex",
  "grip-proc",
  "once_cell",
+ "stylus-sdk",
  "tiny-keccak",
 ]
 

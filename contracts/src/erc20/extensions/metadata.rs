@@ -89,8 +89,12 @@ impl Metadata {
 
 #[cfg(test)]
 mod tests {
-    use alloy_primitives::U256;
-    use stylus_sdk::storage::{StorageBool, StorageString, StorageType};
+    use alloy_primitives::{Address, U256};
+    use grip::prelude::set_msg_sender;
+    use stylus_sdk::{
+        msg,
+        storage::{StorageBool, StorageString, StorageType},
+    };
 
     use super::{Metadata, DEFAULT_DECIMALS};
 
@@ -150,5 +154,14 @@ mod tests {
         assert_eq!(symbol, SYMBOL);
         assert_eq!(decimals, DEFAULT_DECIMALS);
         assert_eq!(initialized, true);
+    }
+
+    #[grip::test]
+    fn msg_sender(meta: Metadata) {
+        let sndr: Address =
+            "DeaDbeefdEAdbeefdEadbEEFdeadbeEFdEaDbeeF".parse().unwrap();
+        assert_eq!(sndr, msg::sender());
+        set_msg_sender(&Address::ZERO.into());
+        assert_eq!(Address::ZERO, msg::sender());
     }
 }
