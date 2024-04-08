@@ -132,7 +132,7 @@ dependencies = [
  "mini-alloc",
  "once_cell",
  "rand",
- "stylus-proc",
+ "stylus-proc 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "stylus-sdk",
 ]
 
@@ -237,9 +237,9 @@ dependencies = [
 
 [[package]]
 name = "getrandom"
-version = "0.2.12"
+version = "0.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "190092ea657667030ac6a35e305e62fc4dd69fd98ac98631e5d3a2b1575a12b5"
+checksum = "94b22e06ecb0110981051723910cbf0b5f5e09a2062dd7663334ee79a9d1286c"
 dependencies = [
  "cfg-if 1.0.0",
  "libc",
@@ -536,6 +536,23 @@ dependencies = [
 [[package]]
 name = "stylus-proc"
 version = "0.4.3"
+dependencies = [
+ "alloy-primitives 0.3.3",
+ "alloy-sol-types",
+ "cfg-if 1.0.0",
+ "convert_case 0.6.0",
+ "lazy_static",
+ "proc-macro2",
+ "quote",
+ "regex",
+ "sha3",
+ "syn 1.0.109",
+ "syn-solidity",
+]
+
+[[package]]
+name = "stylus-proc"
+version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "366c3323b03fc99c7d0124cec4eee10e37a226a14b08829a416feec9f2ebb641"
 dependencies = [
@@ -555,8 +572,6 @@ dependencies = [
 [[package]]
 name = "stylus-sdk"
 version = "0.4.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "74778bf11048b0155b937ee6d52440709d864aa488843238b62272e6c9bdbc1a"
 dependencies = [
  "alloy-primitives 0.3.3",
  "alloy-sol-types",
@@ -565,7 +580,7 @@ dependencies = [
  "hex",
  "keccak-const",
  "lazy_static",
- "stylus-proc",
+ "stylus-proc 0.4.3",
 ]
 
 [[package]]
