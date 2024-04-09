@@ -1,2 +1,2 @@
 #[cfg(any(test, erc721))]
-mod burn;
+pub(crate) mod burn;
