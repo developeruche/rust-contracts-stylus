@@ -1,3 +1,8 @@
+use core::{
+    marker::PhantomData,
+    ops::{Deref, DerefMut},
+};
+
 use alloy_primitives::{fixed_bytes, Address, FixedBytes, U128, U256};
 use stylus_sdk::{
     abi::Bytes, alloy_sol_types::sol, call::Call, evm, msg, prelude::*,
@@ -119,7 +124,7 @@ sol_interface! {
 }
 
 sol_storage! {
-    pub struct ERC721 {
+    pub struct ERC721<T: ERC721Override> {
         mapping(uint256 => address) _owners;
 
         mapping(address => uint256) _balances;
@@ -127,16 +132,18 @@ sol_storage! {
         mapping(uint256 => address) _token_approvals;
 
         mapping(address => mapping(address => bool)) _operator_approvals;
+
+        PhantomData<T> phantom_data;
     }
 }
 
 /// NOTE: Implementation of [`TopLevelStorage`] to be able use `&mut self` when
 /// calling other contracts and not `&mut (impl TopLevelStorage +
 /// BorrowMut<Self>)`. Should be fixed in the future by the Stylus team.
-unsafe impl TopLevelStorage for ERC721 {}
+unsafe impl<T: ERC721Override> TopLevelStorage for ERC721<T> {}
 
 #[external]
-impl ERC721 {
+impl<T: ERC721Override> ERC721<T> {
     /// Returns the number of tokens in `owner`'s account.
     ///
     /// # Arguments
@@ -326,14 +333,14 @@ impl ERC721 {
         // Setting an "auth" argument enables the `_is_authorized` check which
         // verifies that the token exists (`from != 0`). Therefore, it is
         // not needed to verify that the return value is not 0 here.
-        let previous_owner = self._update(to, token_id, msg::sender())?;
+        let previous_owner = T::_update(self, to, token_id, msg::sender())?;
         if previous_owner != from {
             return Err(ERC721IncorrectOwner {
                 sender: from,
                 token_id,
                 owner: previous_owner,
             }
-                .into());
+            .into());
         }
         Ok(())
     }
@@ -443,7 +450,80 @@ impl ERC721 {
     }
 }
 
-impl ERC721 {
+pub trait ERC721Override {
+    /// Transfers `token_id` from its current owner to `to`, or alternatively
+    /// mints (or burns) if the current owner (or `to`) is the zero address.
+    /// Returns the owner of the `token_id` before the update.
+    ///
+    /// The `auth` argument is optional. If the value passed is non-zero, then
+    /// this function will check that `auth` is either the owner of the
+    /// token, or approved to operate on the token (by the owner).
+    ///
+    /// NOTE: If overriding this function in a way that tracks balances, see
+    /// also [`Self::_increase_balance`].
+    ///
+    /// # Arguments
+    ///
+    /// * `&mut self` - Write access to the contract's state.
+    /// * `to` - Account of the recipient.
+    /// * `token_id` - Token id as a number.
+    /// * `auth` - Account used for authorization of the update.
+    ///
+    /// # Errors
+    ///
+    /// * If token does not exist and `auth` is not `Address::ZERO` then
+    /// [`Error::NonexistentToken`] is returned.
+    /// * If `auth` is not `Address::ZERO` and `auth` does not have a right to
+    ///   approve this token
+    /// then [`Error::InsufficientApproval`] is returned.
+    ///
+    /// # Events
+    ///
+    /// Emits a [`Transfer`] event.
+    fn _update<T: ERC721Override>(
+        storage: &mut ERC721<T>,
+        to: Address,
+        token_id: U256,
+        auth: Address,
+    ) -> Result<Address, Error> {
+        let from = storage._owner_of_inner(token_id);
+
+        // Perform (optional) operator check.
+        if !auth.is_zero() {
+            storage._check_authorized(from, auth, token_id)?;
+        }
+
+        // Execute the update.
+        if !from.is_zero() {
+            // Clear approval. No need to re-authorize or emit the Approval
+            // event.
+            storage._approve(Address::ZERO, token_id, Address::ZERO, false)?;
+            storage._balances.setter(from).sub_assign_unchecked(U256::from(1));
+        }
+
+        if !to.is_zero() {
+            storage._balances.setter(to).add_assign_unchecked(U256::from(1));
+        }
+
+        storage._owners.setter(token_id).set(to);
+
+        evm::log(Transfer { from, to, token_id });
+
+        Ok(from)
+    }
+}
+
+// TODO#q: we can use base trait implementation
+pub struct ERC721Base;
+
+impl ERC721Override for ERC721Base { }
+
+// TODO#q: we should have an access to erc721base storage from erc721
+// TODO#q: we should have an access to erc721 from erc721base
+
+
+
+impl<T: ERC721Override> ERC721<T> {
     /// Returns the owner of the `token_id`. Does NOT revert if the token
     /// doesn't exist.
     ///
@@ -458,7 +538,7 @@ impl ERC721 {
     ///
     /// * `&self` - Read access to the contract's state.
     /// * `token_id` - Token id as a number.
-    pub fn _owner_of_inner(&self, token_id: U256) -> Address {
+    fn _owner_of_inner(&self, token_id: U256) -> Address {
         self._owners.get(token_id)
     }
 
@@ -469,7 +549,7 @@ impl ERC721 {
     ///
     /// * `&self` - Read access to the contract's state.
     /// * `token_id` - Token id as a number.
-    pub fn _get_approved_inner(&self, token_id: U256) -> Address {
+    fn _get_approved_inner(&self, token_id: U256) -> Address {
         self._token_approvals.get(token_id)
     }
 
@@ -485,7 +565,7 @@ impl ERC721 {
     /// * `owner` - Account of the token's owner.
     /// * `spender` - Account that will spend token.
     /// * `token_id` - Token id as a number.
-    pub fn _is_authorized(
+    fn _is_authorized(
         &self,
         owner: Address,
         spender: Address,
@@ -493,8 +573,8 @@ impl ERC721 {
     ) -> bool {
         !spender.is_zero()
             && (owner == spender
-            || self.is_approved_for_all(owner, spender)
-            || self._get_approved_inner(token_id) == spender)
+                || self.is_approved_for_all(owner, spender)
+                || self._get_approved_inner(token_id) == spender)
     }
 
     /// Checks if `spender` can operate on `token_id`, assuming the provided
@@ -559,67 +639,6 @@ impl ERC721 {
         self._balances.setter(account).add_assign_unchecked(U256::from(value));
     }
 
-    /// Transfers `token_id` from its current owner to `to`, or alternatively
-    /// mints (or burns) if the current owner (or `to`) is the zero address.
-    /// Returns the owner of the `token_id` before the update.
-    ///
-    /// The `auth` argument is optional. If the value passed is non-zero, then
-    /// this function will check that `auth` is either the owner of the
-    /// token, or approved to operate on the token (by the owner).
-    ///
-    /// NOTE: If overriding this function in a way that tracks balances, see
-    /// also [`Self::_increase_balance`].
-    ///
-    /// # Arguments
-    ///
-    /// * `&mut self` - Write access to the contract's state.
-    /// * `to` - Account of the recipient.
-    /// * `token_id` - Token id as a number.
-    /// * `auth` - Account used for authorization of the update.
-    ///
-    /// # Errors
-    ///
-    /// * If token does not exist and `auth` is not `Address::ZERO` then
-    /// [`Error::NonexistentToken`] is returned.
-    /// * If `auth` is not `Address::ZERO` and `auth` does not have a right to
-    ///   approve this token
-    /// then [`Error::InsufficientApproval`] is returned.
-    ///
-    /// # Events
-    ///
-    /// Emits a [`Transfer`] event.
-    pub fn _update(
-        &mut self,
-        to: Address,
-        token_id: U256,
-        auth: Address,
-    ) -> Result<Address, Error> {
-        let from = self._owner_of_inner(token_id);
-
-        // Perform (optional) operator check.
-        if !auth.is_zero() {
-            self._check_authorized(from, auth, token_id)?;
-        }
-
-        // Execute the update.
-        if !from.is_zero() {
-            // Clear approval. No need to re-authorize or emit the Approval
-            // event.
-            self._approve(Address::ZERO, token_id, Address::ZERO, false)?;
-            self._balances.setter(from).sub_assign_unchecked(U256::from(1));
-        }
-
-        if !to.is_zero() {
-            self._balances.setter(to).add_assign_unchecked(U256::from(1));
-        }
-
-        self._owners.setter(token_id).set(to);
-
-        evm::log(Transfer { from, to, token_id });
-
-        Ok(from)
-    }
-
     /// Mints `token_id` and transfers it to `to`.
     ///
     /// WARNING: Usage of this method is discouraged, use [`Self::_safe_mint`]
@@ -653,7 +672,7 @@ impl ERC721 {
             );
         }
 
-        let previous_owner = self._update(to, token_id, Address::ZERO)?;
+        let previous_owner = T::_update(self, to, token_id, Address::ZERO)?;
         if !previous_owner.is_zero() {
             return Err(ERC721InvalidSender { sender: Address::ZERO }.into());
         }
@@ -733,7 +752,7 @@ impl ERC721 {
     /// Emits a [`Transfer`] event.
     pub fn _burn(&mut self, token_id: U256) -> Result<(), Error> {
         let previous_owner =
-            self._update(Address::ZERO, token_id, Address::ZERO)?;
+            T::_update(self, Address::ZERO, token_id, Address::ZERO)?;
         if previous_owner.is_zero() {
             Err(ERC721NonexistentToken { token_id }.into())
         } else {
@@ -782,7 +801,7 @@ impl ERC721 {
             );
         }
 
-        let previous_owner = self._update(to, token_id, Address::ZERO)?;
+        let previous_owner = T::_update(self, to, token_id, Address::ZERO)?;
         if previous_owner.is_zero() {
             Err(ERC721NonexistentToken { token_id }.into())
         } else if previous_owner != from {
@@ -791,7 +810,7 @@ impl ERC721 {
                 token_id,
                 owner: previous_owner,
             }
-                .into())
+            .into())
         } else {
             Ok(())
         }
@@ -1021,6 +1040,7 @@ mod tests {
     use alloy_primitives::address;
     use once_cell::sync::Lazy;
     use stylus_sdk::storage::StorageMap;
+
     use crate::erc721::base::*;
 
     // NOTE: Alice is always the sender of the message
@@ -1028,7 +1048,7 @@ mod tests {
 
     const BOB: Address = address!("F4EaCDAbEf3c8f1EdE91b6f2A6840bc2E4DD3526");
 
-    impl Default for ERC721 {
+    impl Default for ERC721<ERC721Base> {
         fn default() -> Self {
             let root = U256::ZERO;
 
@@ -1041,6 +1061,7 @@ mod tests {
                 _operator_approvals: unsafe {
                     StorageMap::new(root + U256::from(96), 0)
                 },
+                phantom_data: PhantomData::default(),
             }
         }
     }
@@ -1051,7 +1072,7 @@ mod tests {
     }
 
     #[grip::test]
-    fn mint(contract: ERC721) {
+    fn mint(contract: ERC721<ERC721Base>) {
         let token_id = random_token_id();
         contract._mint(*ALICE, token_id).expect("mint a token for Alice");
         let owner =
@@ -1065,7 +1086,7 @@ mod tests {
     }
 
     #[grip::test]
-    fn error_when_reusing_token_id(contract: ERC721) {
+    fn error_when_reusing_token_id(contract: ERC721<ERC721Base>) {
         let token_id = random_token_id();
         contract._mint(*ALICE, token_id).expect("mint the token a first time");
         let err = contract
@@ -1078,7 +1099,7 @@ mod tests {
     }
 
     #[grip::test]
-    fn transfer(contract: ERC721) {
+    fn transfer(contract: ERC721<ERC721Base>) {
         let token_id = random_token_id();
         contract._mint(*ALICE, token_id).expect("mint a token to Alice");
         contract
@@ -1090,7 +1111,7 @@ mod tests {
     }
 
     #[grip::test]
-    fn error_when_transfer_nonexistent_token(contract: ERC721) {
+    fn error_when_transfer_nonexistent_token(contract: ERC721<ERC721Base>) {
         let token_id = random_token_id();
         let err = contract
             .transfer_from(*ALICE, BOB, token_id)
@@ -1104,7 +1125,7 @@ mod tests {
     }
 
     #[grip::test]
-    fn approve_token_transfer(contract: ERC721) {
+    fn approve_token_transfer(contract: ERC721<ERC721Base>) {
         let token_id = random_token_id();
         contract._mint(*ALICE, token_id).expect("mint token");
         contract
@@ -1114,7 +1135,7 @@ mod tests {
     }
 
     #[grip::test]
-    fn transfer_approved_token(contract: ERC721) {
+    fn transfer_approved_token(contract: ERC721<ERC721Base>) {
         let token_id = random_token_id();
         contract._mint(BOB, token_id).expect("mint token to Bob");
         contract._token_approvals.setter(token_id).set(*ALICE);
@@ -1127,7 +1148,7 @@ mod tests {
     }
 
     #[grip::test]
-    fn error_when_transfer_unapproved_token(contract: ERC721) {
+    fn error_when_transfer_unapproved_token(contract: ERC721<ERC721Base>) {
         let token_id = random_token_id();
         contract._mint(BOB, token_id).expect("mint token to Bob");
         let err = contract

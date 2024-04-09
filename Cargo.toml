@@ -26,5 +26,6 @@ incremental = false
 [profile.dev]
 panic = "abort"
 
+# TODO#q: use forked repo
 [patch.crates-io.stylus-sdk]
 path = "../stylus-sdk-rs/stylus-sdk"

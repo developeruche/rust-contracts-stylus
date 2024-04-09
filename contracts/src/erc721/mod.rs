@@ -5,21 +5,22 @@ use alloy_primitives::{fixed_bytes, Address, FixedBytes, U128, U256};
 use stylus_sdk::{
     abi::Bytes, alloy_sol_types::sol, call::Call, evm, msg, prelude::*,
 };
+use crate::erc721::extensions::{burnable::ERC721Burnable, pausable::ERC721Pausable};
 
 sol_storage!{
     #[entrypoint]
     pub struct ERC721 {
         #[borrow]
-        base::ERC721 erc721;
+        base::ERC721<base::ERC721Base> erc721;
         #[borrow]
-        extensions::burnable::ERC721Burnable burnable;
+        ERC721Burnable<base::ERC721Base> burnable;
         #[borrow]
-        extensions::pausable::ERC721Pausable pausable;
+        ERC721Pausable<base::ERC721Base> pausable;
     }
 }
 
 #[external]
-#[inherit(extensions::burnable::ERC721Burnable)]
-#[inherit(extensions::pausable::ERC721Pausable)]
-#[inherit(base::ERC721)]
+#[inherit(ERC721Burnable<base::ERC721Base>)]
+#[inherit(ERC721Pausable<base::ERC721Base>)]
+#[inherit(base::ERC721<base::ERC721Base>)]
 impl ERC721 {}

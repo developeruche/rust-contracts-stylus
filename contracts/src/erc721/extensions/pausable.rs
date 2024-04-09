@@ -1,14 +1,16 @@
 use core::borrow::BorrowMut;
+use core::marker::PhantomData;
 
 use alloy_primitives::Address;
 use alloy_sol_types::{sol, SolError};
 use stylus_sdk::{alloy_primitives::U256, evm, msg, prelude::*};
 
-use crate::erc721::base::{Error, ERC721};
+use crate::erc721::base;
 
 sol_storage! {
-    pub struct ERC721Pausable {
+    pub struct ERC721Pausable<T> {
         bool paused;
+        PhantomData<T> phantom_data;
     }
 }
 
@@ -27,8 +29,8 @@ sol! {
 }
 
 #[external]
-#[borrow(ERC721)]
-impl ERC721Pausable {
+#[borrow(base::ERC721<T>)]
+impl<T: base::ERC721Override> ERC721Pausable<T> {
     /// ERC-721 Pausable implementation
     /// ERC-721 token with pausable token transfers, minting and burning.
 
