@@ -12,10 +12,14 @@ sol_storage!{
         #[borrow]
         base::ERC721 erc721;
         #[borrow]
-        extensions::burn::ERC721Burnable burnable;
+        extensions::burnable::ERC721Burnable burnable;
+        #[borrow]
+        extensions::pausable::ERC721Pausable pausable;
     }
 }
 
 #[external]
-#[inherit(extensions::burn::ERC721Burnable, base::ERC721)]
+#[inherit(extensions::burnable::ERC721Burnable)]
+#[inherit(extensions::pausable::ERC721Pausable)]
+#[inherit(base::ERC721)]
 impl ERC721 {}
