@@ -3,27 +3,26 @@ use core::{borrow::BorrowMut, marker::PhantomData};
 use alloy_primitives::Address;
 use stylus_sdk::{alloy_primitives::U256, msg, prelude::*};
 
-use crate::erc721::base;
+use crate::erc721::{base, base::ERC721Virtual, Storage};
 
 sol_storage! {
-    pub struct ERC721Burnable<T: base::ERC721Override> {
+    pub struct ERC721Burnable<T: ERC721Virtual> {
         PhantomData<T> phantom_data;
     }
 }
 
 #[external]
-#[borrow(base::ERC721<T>)]
-impl<T: base::ERC721Override> ERC721Burnable<T> {
+#[restrict_storage_with(impl Storage<T>)]
+impl<T: ERC721Virtual> ERC721Burnable<T> {
     fn burn<S>(storage: &mut S, token_id: U256) -> Result<(), base::Error>
     where
-        S: TopLevelStorage + BorrowMut<base::ERC721<T>>,
+        S: Storage<T>,
     {
-        T::_update(
-            storage.borrow_mut(),
-            Address::ZERO,
-            token_id,
-            msg::sender(),
-        )?;
+        T::_update(storage, Address::ZERO, token_id, msg::sender())?;
         Ok(())
     }
 }
+
+pub struct ERC721BurnableOverride<T: ERC721Virtual>(PhantomData<T>);
+
+impl<Base: ERC721Virtual> ERC721Virtual for ERC721BurnableOverride<Base> {}
