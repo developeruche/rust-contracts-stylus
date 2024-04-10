@@ -1,10 +1,10 @@
-use core::{borrow::BorrowMut, marker::PhantomData};
+use core::{marker::PhantomData};
 
 use alloy_primitives::Address;
 use alloy_sol_types::{sol, SolError};
 use stylus_sdk::{alloy_primitives::U256, evm, msg, prelude::*};
 
-use crate::erc721::{base, base::{ERC721Virtual, Transfer, ERC721}, Storage};
+use crate::erc721::{base::ERC721Virtual, Storage};
 
 sol_storage! {
     pub struct ERC721Pausable<T> {
@@ -37,7 +37,7 @@ pub enum Error {
 
 #[external]
 #[restrict_storage_with(impl Storage<T>)]
-impl<T: base::ERC721Virtual> ERC721Pausable<T> {
+impl<T: ERC721Virtual> ERC721Pausable<T> {
     /// ERC-721 Pausable implementation
     /// ERC-721 token with pausable token transfers, minting and burning.
 

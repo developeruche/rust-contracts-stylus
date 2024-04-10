@@ -1,38 +1,39 @@
-pub mod base;
-pub mod extensions;
+use core::{borrow::BorrowMut, marker::PhantomData, ops::Deref};
 
-use core::borrow::BorrowMut;
-use core::ops::Deref;
-
-use alloy_primitives::{fixed_bytes, Address, FixedBytes, U128, U256};
+use alloy_primitives::U256;
 use stylus_sdk::{
-    abi::Bytes, alloy_sol_types::sol, call::Call, evm, msg, prelude::*,
+    prelude::*,
+    storage::StorageMap,
 };
 
 use crate::erc721::{
-    base::ERC721Virtual,
-    extensions::{burnable::ERC721Burnable, pausable::ERC721Pausable},
+    base::{ERC721Base, ERC721BaseOverride, ERC721Virtual},
+    extensions::{
+        burnable::{ERC721Burnable, ERC721BurnableOverride},
+        pausable::{ERC721Pausable, ERC721PausableOverride},
+    },
 };
-use crate::erc721::base::ERC721Base;
-use crate::erc721::extensions::burnable::ERC721BurnableOverride;
-use crate::erc721::extensions::pausable::ERC721PausableOverride;
 
-pub trait Storage<T: ERC721Virtual>:
+pub mod base;
+pub mod extensions;
+
+pub(crate) trait Storage<T: ERC721Virtual>:
     TopLevelStorage
     + BorrowMut<ERC721Burnable<T>>
     + BorrowMut<ERC721Pausable<T>>
-    + BorrowMut<base::ERC721<T>>
+    + BorrowMut<ERC721Base<T>>
 {
-    fn erc721_mut(&mut self) -> &mut base::ERC721<T>{
+    fn erc721_mut(&mut self) -> &mut base::ERC721Base<T> {
         self.borrow_mut()
     }
-    
-    fn erc721(&self) -> &base::ERC721<T>{
+
+    fn erc721(&self) -> &base::ERC721Base<T> {
         self.borrow()
     }
 }
 
-type ERC721Override = ERC721BurnableOverride<ERC721PausableOverride<ERC721Base>>;
+type ERC721Override =
+    ERC721BurnableOverride<ERC721PausableOverride<ERC721BaseOverride>>;
 
 impl Storage<ERC721Override> for ERC721 {}
 
@@ -40,7 +41,7 @@ sol_storage! {
     #[entrypoint]
     pub struct ERC721 {
         #[borrow]
-        base::ERC721<ERC721Override> erc721;
+        ERC721Base<ERC721Override> erc721;
         #[borrow]
         ERC721Burnable<ERC721Override> burnable;
         #[borrow]
@@ -51,6 +52,45 @@ sol_storage! {
 #[external]
 #[inherit(ERC721Burnable<ERC721Override>)]
 #[inherit(ERC721Pausable<ERC721Override>)]
-#[inherit(base::ERC721<ERC721Override>)]
+#[inherit(ERC721Base<ERC721Override>)]
 #[restrict_storage_with(impl Storage<ERC721Override>)]
 impl ERC721 {}
+
+#[cfg(test)]
+pub(crate) mod tests {
+    use stylus_sdk::storage::StorageBool;
+
+    use super::*;
+
+    impl Default for ERC721 {
+        fn default() -> Self {
+            let root = U256::ZERO;
+
+            ERC721 {
+                erc721: ERC721Base {
+                    _owners: unsafe { StorageMap::new(root, 0) },
+                    _balances: unsafe {
+                        StorageMap::new(root + U256::from(32), 0)
+                    },
+                    _token_approvals: unsafe {
+                        StorageMap::new(root + U256::from(64), 0)
+                    },
+                    _operator_approvals: unsafe {
+                        StorageMap::new(root + U256::from(96), 0)
+                    },
+                    phantom_data: PhantomData::default(),
+                },
+                burnable: ERC721Burnable {
+                    phantom_data: PhantomData::default(),
+                },
+                pausable: ERC721Pausable {
+                    paused: unsafe {
+                        // TODO: what should be size of bool with alignment?
+                        StorageBool::new(root + U256::from(128), 0)
+                    },
+                    phantom_data: PhantomData::default(),
+                },
+            }
+        }
+    }
+}

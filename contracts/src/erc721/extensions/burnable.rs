@@ -1,4 +1,4 @@
-use core::{borrow::BorrowMut, marker::PhantomData};
+use core::marker::PhantomData;
 
 use alloy_primitives::Address;
 use stylus_sdk::{alloy_primitives::U256, msg, prelude::*};
