@@ -46,10 +46,11 @@ pub(crate) trait Storage<T: ERC721Virtual>:
 type ERC721Override =
     ERC721BurnableOverride<ERC721PausableOverride<ERC721BaseOverride>>;
 
+unsafe impl TopLevelStorage for ERC721 {}
+
 impl Storage<ERC721Override> for ERC721 {}
 
 sol_storage! {
-    #[entrypoint]
     pub struct ERC721 {
         #[borrow]
         ERC721Base<ERC721Override> erc721;
@@ -106,17 +107,17 @@ pub(crate) mod tests {
                     _operator_approvals: unsafe {
                         StorageMap::new(root + U256::from(96), 0)
                     },
-                    phantom_data: PhantomData::default(),
+                    phantom_data: PhantomData,
                 },
                 burnable: ERC721Burnable {
-                    phantom_data: PhantomData::default(),
+                    phantom_data: PhantomData,
                 },
                 pausable: ERC721Pausable {
                     paused: unsafe {
                         // TODO: what should be size of bool with alignment?
                         StorageBool::new(root + U256::from(128), 0)
                     },
-                    phantom_data: PhantomData::default(),
+                    phantom_data: PhantomData,
                 },
             }
         }
