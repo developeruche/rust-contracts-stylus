@@ -1,20 +1,21 @@
 use core::{borrow::BorrowMut, marker::PhantomData};
-
 use alloy_primitives::U256;
-use stylus_sdk::{
-    prelude::*,
-    storage::StorageMap,
-};
-
+use stylus_sdk::{prelude::*, storage::StorageMap};
 use crate::erc721::{
-    base::{ERC721Base, ERC721BaseOverride, ERC721Virtual},
+    base::{
+        ERC721Base, ERC721BaseOverride, ERC721IncorrectOwner,
+        ERC721InsufficientApproval, ERC721InvalidApprover,
+        ERC721InvalidOperator, ERC721InvalidOwner, ERC721InvalidReceiver,
+        ERC721InvalidSender, ERC721NonexistentToken, ERC721Virtual,
+    },
     extensions::{
         burnable::{ERC721Burnable, ERC721BurnableOverride},
-        pausable::{ERC721Pausable, ERC721PausableOverride},
+        pausable::{
+            ERC721Pausable, ERC721PausableOverride, EnforcedPause,
+            ExpectedPause,
+        },
     },
 };
-use crate::erc721::base::{ERC721IncorrectOwner, ERC721InsufficientApproval, ERC721InvalidApprover, ERC721InvalidOperator, ERC721InvalidOwner, ERC721InvalidReceiver, ERC721InvalidSender, ERC721NonexistentToken};
-use crate::erc721::extensions::pausable::{EnforcedPause, ExpectedPause};
 
 pub mod base;
 pub mod extensions;
@@ -32,7 +33,7 @@ pub(crate) trait Storage<T: ERC721Virtual>:
     fn erc721(&self) -> &ERC721Base<T> {
         self.borrow()
     }
-    
+
     fn pausable_mut(&mut self) -> &mut ERC721Pausable<T> {
         self.borrow_mut()
     }
@@ -65,7 +66,6 @@ sol_storage! {
 #[inherit(ERC721Base<ERC721Override>)]
 #[restrict_storage_with(impl Storage<ERC721Override>)]
 impl ERC721 {}
-
 
 /// An ERC-721 error defined as described in [ERC-6093].
 ///
@@ -121,7 +121,6 @@ pub(crate) mod tests {
             }
         }
     }
-
 
     pub(crate) fn random_token_id() -> U256 {
         let num: u32 = rand::random();

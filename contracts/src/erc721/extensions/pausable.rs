@@ -1,15 +1,10 @@
 use core::marker::PhantomData;
 
 use alloy_primitives::Address;
-use alloy_sol_types::{sol, SolError};
+use alloy_sol_types::sol;
 use stylus_sdk::{alloy_primitives::U256, evm, msg, prelude::*};
 
-use crate::erc721::{
-    base::ERC721Virtual
-    ,
-    Error,
-    Storage
-};
+use crate::erc721::{base::ERC721Virtual, Error, Storage};
 
 sol_storage! {
     pub struct ERC721Pausable<T> {
@@ -85,11 +80,10 @@ pub(crate) mod tests {
     use alloy_primitives::address;
     use once_cell::sync::Lazy;
 
-    use crate::erc721::{
-        base::ERC721Base, ERC721, Storage, tests::random_token_id,
-    };
-
     use super::*;
+    use crate::erc721::{
+        base::ERC721Base, tests::random_token_id, Storage, ERC721,
+    };
 
     static ALICE: Lazy<Address> = Lazy::new(msg::sender);
 
@@ -107,10 +101,7 @@ pub(crate) mod tests {
 
         let err = ERC721Base::transfer_from(storage, *ALICE, BOB, token_id)
             .expect_err("should not transfer from paused contract");
-        
-        assert!(matches!(
-            err,
-            Error::EnforcedPause(_)
-        ));
+
+        assert!(matches!(err, Error::EnforcedPause(_)));
     }
 }

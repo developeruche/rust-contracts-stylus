@@ -1,13 +1,12 @@
 use core::marker::PhantomData;
-use alloy_primitives::{Address, fixed_bytes, FixedBytes, U128, U256};
+
+use alloy_primitives::{fixed_bytes, Address, FixedBytes, U128, U256};
 use stylus_sdk::{
     abi::Bytes, alloy_sol_types::sol, call::Call, evm, msg, prelude::*, storage,
 };
 
-use crate::arithmetic::{AddAssignUnchecked, SubAssignUnchecked};
-
-// #[cfg(not(test))]
 use super::{Error, Storage};
+use crate::arithmetic::{AddAssignUnchecked, SubAssignUnchecked};
 
 sol! {
     /// Emitted when the `tokenId` token is transferred from `from` to `to`.
@@ -1054,10 +1053,8 @@ pub mod tests {
     use alloy_primitives::address;
     use once_cell::sync::Lazy;
 
-    use crate::erc721::{ERC721, Storage};
-    use crate::erc721::tests::random_token_id;
-
     use super::*;
+    use crate::erc721::{tests::random_token_id, Storage, ERC721};
 
     // NOTE: Alice is always the sender of the message
     static ALICE: Lazy<Address> = Lazy::new(msg::sender);
