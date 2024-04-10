@@ -26,7 +26,7 @@ impl<T: ERC721Virtual> ERC721Burnable<T> {
 pub struct ERC721BurnableOverride<T: ERC721Virtual>(PhantomData<T>);
 
 impl<Base: ERC721Virtual> ERC721Virtual for ERC721BurnableOverride<Base> {
-    // TODO#q: think about auto implementation or using trait
+    // TODO#q: think about auto implementation
     fn _update<This: ERC721Virtual>(
         storage: &mut impl Storage<This>,
         to: Address,
