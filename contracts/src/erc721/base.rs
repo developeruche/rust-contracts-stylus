@@ -325,7 +325,7 @@ impl<T: ERC721Virtual> ERC721Base<T> {
         // Setting an "auth" argument enables the `_is_authorized` check which
         // verifies that the token exists (`from != 0`). Therefore, it is
         // not needed to verify that the return value is not 0 here.
-        let previous_owner = T::_update(storage, to, token_id, msg::sender())?;
+        let previous_owner = T::Update::call(storage, to, token_id, msg::sender())?;
         if previous_owner != from {
             return Err(ERC721IncorrectOwner {
                 sender: from,
@@ -442,9 +442,58 @@ impl<T: ERC721Virtual> ERC721Base<T> {
     }
 }
 
+pub trait ERC721Virtual {
+    type Update: ERC721UpdateVirtual;
+}
+
 pub struct ERC721BaseOverride;
+
 impl ERC721Virtual for ERC721BaseOverride {
-    fn _update<T: ERC721Virtual>(
+    type Update = ERC721BaseUpdateOverride;
+}
+
+pub trait ERC721UpdateVirtual {
+    /// Transfers `token_id` from its current owner to `to`, or alternatively
+    /// mints (or burns) if the current owner (or `to`) is the zero address.
+    /// Returns the owner of the `token_id` before the update.
+    ///
+    /// The `auth` argument is optional. If the value passed is non-zero, then
+    /// this function will check that `auth` is either the owner of the
+    /// token, or approved to operate on the token (by the owner).
+    ///
+    /// NOTE: If overriding this function in a way that tracks balances, see
+    /// also [`Self::_increase_balance`].
+    ///
+    /// # Arguments
+    ///
+    /// * `&mut self` - Write access to the contract's state.
+    /// * `to` - Account of the recipient.
+    /// * `token_id` - Token id as a number.
+    /// * `auth` - Account used for authorization of the update.
+    ///
+    /// # Errors
+    ///
+    /// * If token does not exist and `auth` is not `Address::ZERO` then
+    /// [`Error::NonexistentToken`] is returned.
+    /// * If `auth` is not `Address::ZERO` and `auth` does not have a right to
+    ///   approve this token
+    /// then [`Error::InsufficientApproval`] is returned.
+    ///
+    /// # Events
+    ///
+    /// Emits a [`Transfer`] event.
+    fn call<T: ERC721Virtual>(
+        storage: &mut impl Storage<T>,
+        to: Address,
+        token_id: U256,
+        auth: Address,
+    ) -> Result<Address, Error>;
+}
+
+pub struct ERC721BaseUpdateOverride;
+
+impl ERC721UpdateVirtual for ERC721BaseUpdateOverride {
+    fn call<T: ERC721Virtual>(
         storage: &mut impl Storage<T>,
         to: Address,
         token_id: U256,
@@ -488,44 +537,6 @@ impl ERC721Virtual for ERC721BaseOverride {
 
         Ok(from)
     }
-}
-
-pub trait ERC721Virtual: Sized {
-    /// Transfers `token_id` from its current owner to `to`, or alternatively
-    /// mints (or burns) if the current owner (or `to`) is the zero address.
-    /// Returns the owner of the `token_id` before the update.
-    ///
-    /// The `auth` argument is optional. If the value passed is non-zero, then
-    /// this function will check that `auth` is either the owner of the
-    /// token, or approved to operate on the token (by the owner).
-    ///
-    /// NOTE: If overriding this function in a way that tracks balances, see
-    /// also [`Self::_increase_balance`].
-    ///
-    /// # Arguments
-    ///
-    /// * `&mut self` - Write access to the contract's state.
-    /// * `to` - Account of the recipient.
-    /// * `token_id` - Token id as a number.
-    /// * `auth` - Account used for authorization of the update.
-    ///
-    /// # Errors
-    ///
-    /// * If token does not exist and `auth` is not `Address::ZERO` then
-    /// [`Error::NonexistentToken`] is returned.
-    /// * If `auth` is not `Address::ZERO` and `auth` does not have a right to
-    ///   approve this token
-    /// then [`Error::InsufficientApproval`] is returned.
-    ///
-    /// # Events
-    ///
-    /// Emits a [`Transfer`] event.
-    fn _update<T: ERC721Virtual>(
-        storage: &mut impl Storage<T>,
-        to: Address,
-        token_id: U256,
-        auth: Address,
-    ) -> Result<Address, Error>;
 }
 
 impl<T: ERC721Virtual> ERC721Base<T> {
@@ -681,7 +692,7 @@ impl<T: ERC721Virtual> ERC721Base<T> {
             );
         }
 
-        let previous_owner = T::_update(storage, to, token_id, Address::ZERO)?;
+        let previous_owner = T::Update::call(storage, to, token_id, Address::ZERO)?;
         if !previous_owner.is_zero() {
             return Err(ERC721InvalidSender { sender: Address::ZERO }.into());
         }
@@ -765,7 +776,7 @@ impl<T: ERC721Virtual> ERC721Base<T> {
         token_id: U256,
     ) -> Result<(), Error> {
         let previous_owner =
-            T::_update(storage, Address::ZERO, token_id, Address::ZERO)?;
+            T::Update::call(storage, Address::ZERO, token_id, Address::ZERO)?;
         if previous_owner.is_zero() {
             Err(ERC721NonexistentToken { token_id }.into())
         } else {
@@ -814,7 +825,7 @@ impl<T: ERC721Virtual> ERC721Base<T> {
             );
         }
 
-        let previous_owner = T::_update(storage, to, token_id, Address::ZERO)?;
+        let previous_owner = T::Update::call(storage, to, token_id, Address::ZERO)?;
         if previous_owner.is_zero() {
             Err(ERC721NonexistentToken { token_id }.into())
         } else if previous_owner != from {

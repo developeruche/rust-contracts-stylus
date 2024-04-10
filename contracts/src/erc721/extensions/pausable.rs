@@ -5,6 +5,7 @@ use alloy_sol_types::sol;
 use stylus_sdk::{alloy_primitives::U256, evm, msg, prelude::*};
 
 use crate::erc721::{base::ERC721Virtual, Error, Storage};
+use crate::erc721::base::ERC721UpdateVirtual;
 
 sol_storage! {
     pub struct ERC721Pausable<T> {
@@ -60,10 +61,17 @@ impl<T: ERC721Virtual> ERC721Pausable<T> {
     }
 }
 
+// TODO#q: should we add derive with auto implementation ERC721Virtual?
 pub struct ERC721PausableOverride<T: ERC721Virtual>(PhantomData<T>);
 
-impl<Base: ERC721Virtual> ERC721Virtual for ERC721PausableOverride<Base> {
-    fn _update<This: ERC721Virtual>(
+impl<T: ERC721Virtual> ERC721Virtual for ERC721PausableOverride<T> {
+    type Update = ERC721PausableUpdateOverride<T::Update>;
+}
+
+pub struct ERC721PausableUpdateOverride<T: ERC721UpdateVirtual>(PhantomData<T>);
+
+impl<Base: ERC721UpdateVirtual> ERC721UpdateVirtual for ERC721PausableUpdateOverride<Base> {
+    fn call<This: ERC721Virtual>(
         storage: &mut impl Storage<This>,
         to: Address,
         token_id: U256,
@@ -71,9 +79,10 @@ impl<Base: ERC721Virtual> ERC721Virtual for ERC721PausableOverride<Base> {
     ) -> Result<Address, Error> {
         let pausable: &ERC721Pausable<This> = storage.borrow();
         pausable.require_not_paused()?;
-        Base::_update(storage, to, token_id, auth)
+        Base::call(storage, to, token_id, auth)
     }
 }
+
 
 #[cfg(test)]
 pub(crate) mod tests {
