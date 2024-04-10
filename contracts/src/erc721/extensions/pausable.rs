@@ -5,10 +5,10 @@ use alloy_sol_types::{sol, SolError};
 use stylus_sdk::{alloy_primitives::U256, evm, msg, prelude::*};
 
 use crate::erc721::{
-    base::{ERC721Virtual},
-    extensions::burnable::ERC721Burnable,
-    Storage,
-    Error
+    base::ERC721Virtual
+    ,
+    Error,
+    Storage
 };
 
 sol_storage! {
@@ -33,13 +33,6 @@ sol! {
     #[derive(Debug)]
     error ExpectedPause();
 }
-
-// NOTE: use shared error not base
-// #[derive(SolidityError, Debug)]
-// pub enum Error {
-//     EnforcedPause(EnforcedPause),
-//     ExpectedPause(ExpectedPause),
-// }
 
 #[external]
 #[restrict_storage_with(impl Storage<T>)]
@@ -92,10 +85,11 @@ pub(crate) mod tests {
     use alloy_primitives::address;
     use once_cell::sync::Lazy;
 
-    use super::*;
     use crate::erc721::{
-        base::ERC721Base, tests::random_token_id, Storage, ERC721,
+        base::ERC721Base, ERC721, Storage, tests::random_token_id,
     };
+
+    use super::*;
 
     static ALICE: Lazy<Address> = Lazy::new(msg::sender);
 

@@ -3,8 +3,7 @@ use core::marker::PhantomData;
 use alloy_primitives::Address;
 use stylus_sdk::{alloy_primitives::U256, msg, prelude::*};
 
-use crate::erc721::{base, base::ERC721Virtual, Error, Storage};
-use crate::erc721::extensions::pausable::ERC721Pausable;
+use crate::erc721::{base::ERC721Virtual, Error, Storage};
 
 sol_storage! {
     pub struct ERC721Burnable<T: ERC721Virtual> {

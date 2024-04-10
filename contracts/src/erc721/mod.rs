@@ -1,4 +1,4 @@
-use core::{borrow::BorrowMut, marker::PhantomData, ops::Deref};
+use core::{borrow::BorrowMut, marker::PhantomData};
 
 use alloy_primitives::U256;
 use stylus_sdk::{
@@ -25,11 +25,11 @@ pub(crate) trait Storage<T: ERC721Virtual>:
     + BorrowMut<ERC721Pausable<T>>
     + BorrowMut<ERC721Base<T>>
 {
-    fn erc721_mut(&mut self) -> &mut base::ERC721Base<T> {
+    fn erc721_mut(&mut self) -> &mut ERC721Base<T> {
         self.borrow_mut()
     }
 
-    fn erc721(&self) -> &base::ERC721Base<T> {
+    fn erc721(&self) -> &ERC721Base<T> {
         self.borrow()
     }
     

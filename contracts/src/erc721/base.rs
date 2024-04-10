@@ -1,18 +1,13 @@
-use core::{
-    borrow::BorrowMut,
-    marker::PhantomData,
-    ops::{Deref, DerefMut},
-};
-
-use alloy_primitives::{fixed_bytes, Address, FixedBytes, U128, U256};
+use core::marker::PhantomData;
+use alloy_primitives::{Address, fixed_bytes, FixedBytes, U128, U256};
 use stylus_sdk::{
     abi::Bytes, alloy_sol_types::sol, call::Call, evm, msg, prelude::*, storage,
 };
 
+use crate::arithmetic::{AddAssignUnchecked, SubAssignUnchecked};
+
 // #[cfg(not(test))]
 use super::{Error, Storage};
-use crate::arithmetic::{AddAssignUnchecked, SubAssignUnchecked};
-use crate::erc721::extensions::pausable::{EnforcedPause, ExpectedPause};
 
 sol! {
     /// Emitted when the `tokenId` token is transferred from `from` to `to`.
@@ -125,11 +120,6 @@ sol_storage! {
         PhantomData<T> phantom_data;
     }
 }
-
-/// NOTE: Implementation of [`TopLevelStorage`] to be able use `&mut self` when
-/// calling other contracts and not `&mut (impl TopLevelStorage +
-/// BorrowMut<Self>)`. Should be fixed in the future by the Stylus team.
-unsafe impl<T: ERC721Virtual> TopLevelStorage for ERC721Base<T> {}
 
 #[external]
 #[restrict_storage_with(impl Storage<T>)]
@@ -1063,9 +1053,11 @@ impl<T: ERC721Virtual> ERC721Base<T> {
 pub mod tests {
     use alloy_primitives::address;
     use once_cell::sync::Lazy;
-    use super::*;
-    use crate::erc721::{Storage, ERC721};
+
+    use crate::erc721::{ERC721, Storage};
     use crate::erc721::tests::random_token_id;
+
+    use super::*;
 
     // NOTE: Alice is always the sender of the message
     static ALICE: Lazy<Address> = Lazy::new(msg::sender);
