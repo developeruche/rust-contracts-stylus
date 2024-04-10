@@ -12,6 +12,7 @@ use stylus_sdk::{
 // #[cfg(not(test))]
 use super::Storage;
 use crate::arithmetic::{AddAssignUnchecked, SubAssignUnchecked};
+use crate::erc721::extensions::pausable::{EnforcedPause, ExpectedPause};
 
 sol! {
     /// Emitted when the `tokenId` token is transferred from `from` to `to`.
@@ -103,6 +104,9 @@ pub enum Error {
     InsufficientApproval(ERC721InsufficientApproval),
     InvalidApprover(ERC721InvalidApprover),
     InvalidOperator(ERC721InvalidOperator),
+    // TODO#q: move these errors to shared
+    EnforcedPause(EnforcedPause),
+    ExpectedPause(ExpectedPause),
 }
 
 sol_interface! {
@@ -545,11 +549,6 @@ pub trait ERC721Virtual: Sized {
         Ok(from)
     }
 }
-
-// TODO#q: we can use base trait implementation
-
-// TODO#q: we should have an access to erc721base storage from erc721
-// TODO#q: we should have an access to erc721 from erc721base
 
 impl<T: ERC721Virtual> ERC721Base<T> {
     /// Returns the owner of the `token_id`. Does NOT revert if the token
@@ -1079,21 +1078,17 @@ impl<T: ERC721Virtual> ERC721Base<T> {
 }
 
 #[cfg(test)]
-pub(crate) mod tests {
+pub mod tests {
     use alloy_primitives::address;
     use once_cell::sync::Lazy;
     use super::*;
     use crate::erc721::{Storage, ERC721};
+    use crate::erc721::tests::random_token_id;
 
     // NOTE: Alice is always the sender of the message
     static ALICE: Lazy<Address> = Lazy::new(msg::sender);
 
     const BOB: Address = address!("F4EaCDAbEf3c8f1EdE91b6f2A6840bc2E4DD3526");
-
-    fn random_token_id() -> U256 {
-        let num: u32 = rand::random();
-        num.try_into().expect("conversion to U256")
-    }
 
     #[grip::test]
     fn mint(storage: ERC721) {

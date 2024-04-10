@@ -13,6 +13,7 @@ use crate::erc721::{
         pausable::{ERC721Pausable, ERC721PausableOverride},
     },
 };
+use crate::erc721::base::{ERC721IncorrectOwner, ERC721InsufficientApproval, ERC721InvalidApprover, ERC721InvalidOperator, ERC721InvalidOwner, ERC721InvalidReceiver, ERC721InvalidSender, ERC721NonexistentToken};
 
 pub mod base;
 pub mod extensions;
@@ -28,6 +29,14 @@ pub(crate) trait Storage<T: ERC721Virtual>:
     }
 
     fn erc721(&self) -> &base::ERC721Base<T> {
+        self.borrow()
+    }
+    
+    fn pausable_mut(&mut self) -> &mut ERC721Pausable<T> {
+        self.borrow_mut()
+    }
+
+    fn pausable(&self) -> &ERC721Pausable<T> {
         self.borrow()
     }
 }
@@ -92,5 +101,11 @@ pub(crate) mod tests {
                 },
             }
         }
+    }
+
+
+    pub(crate) fn random_token_id() -> U256 {
+        let num: u32 = rand::random();
+        num.try_into().expect("conversion to U256")
     }
 }
