@@ -3,7 +3,7 @@ use core::marker::PhantomData;
 use alloy_primitives::Address;
 use stylus_sdk::{alloy_primitives::U256, msg, prelude::*};
 
-use crate::erc721::{base, base::ERC721Virtual, Storage};
+use crate::erc721::{base, base::ERC721Virtual, Error, Storage};
 use crate::erc721::extensions::pausable::ERC721Pausable;
 
 sol_storage! {
@@ -15,7 +15,7 @@ sol_storage! {
 #[external]
 #[restrict_storage_with(impl Storage<T>)]
 impl<T: ERC721Virtual> ERC721Burnable<T> {
-    fn burn<S>(storage: &mut S, token_id: U256) -> Result<(), base::Error>
+    fn burn<S>(storage: &mut S, token_id: U256) -> Result<(), Error>
     where
         S: Storage<T>,
     {
@@ -33,7 +33,7 @@ impl<Base: ERC721Virtual> ERC721Virtual for ERC721BurnableOverride<Base> {
         to: Address,
         token_id: U256,
         auth: Address,
-    ) -> Result<Address, crate::erc721::base::Error> {
+    ) -> Result<Address, Error> {
         Base::_update(storage, to, token_id, auth)
     }
 }

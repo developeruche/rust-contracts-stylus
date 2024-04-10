@@ -14,6 +14,7 @@ use crate::erc721::{
     },
 };
 use crate::erc721::base::{ERC721IncorrectOwner, ERC721InsufficientApproval, ERC721InvalidApprover, ERC721InvalidOperator, ERC721InvalidOwner, ERC721InvalidReceiver, ERC721InvalidSender, ERC721NonexistentToken};
+use crate::erc721::extensions::pausable::{EnforcedPause, ExpectedPause};
 
 pub mod base;
 pub mod extensions;
@@ -64,6 +65,24 @@ sol_storage! {
 #[inherit(ERC721Base<ERC721Override>)]
 #[restrict_storage_with(impl Storage<ERC721Override>)]
 impl ERC721 {}
+
+
+/// An ERC-721 error defined as described in [ERC-6093].
+///
+/// [ERC-6093]: https://eips.ethereum.org/EIPS/eip-6093
+#[derive(SolidityError, Debug)]
+pub enum Error {
+    InvalidOwner(ERC721InvalidOwner),
+    NonexistentToken(ERC721NonexistentToken),
+    IncorrectOwner(ERC721IncorrectOwner),
+    InvalidSender(ERC721InvalidSender),
+    InvalidReceiver(ERC721InvalidReceiver),
+    InsufficientApproval(ERC721InsufficientApproval),
+    InvalidApprover(ERC721InvalidApprover),
+    InvalidOperator(ERC721InvalidOperator),
+    EnforcedPause(EnforcedPause),
+    ExpectedPause(ExpectedPause),
+}
 
 #[cfg(test)]
 pub(crate) mod tests {

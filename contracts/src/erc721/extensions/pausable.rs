@@ -5,9 +5,10 @@ use alloy_sol_types::{sol, SolError};
 use stylus_sdk::{alloy_primitives::U256, evm, msg, prelude::*};
 
 use crate::erc721::{
-    base::{ERC721Virtual, Error},
+    base::{ERC721Virtual},
     extensions::burnable::ERC721Burnable,
     Storage,
+    Error
 };
 
 sol_storage! {
@@ -79,7 +80,7 @@ impl<Base: ERC721Virtual> ERC721Virtual for ERC721PausableOverride<Base> {
         to: Address,
         token_id: U256,
         auth: Address,
-    ) -> Result<Address, crate::erc721::base::Error> {
+    ) -> Result<Address, Error> {
         let pausable: &ERC721Pausable<This> = storage.borrow();
         pausable.require_not_paused()?;
         Base::_update(storage, to, token_id, auth)

@@ -10,7 +10,7 @@ use stylus_sdk::{
 };
 
 // #[cfg(not(test))]
-use super::Storage;
+use super::{Error, Storage};
 use crate::arithmetic::{AddAssignUnchecked, SubAssignUnchecked};
 use crate::erc721::extensions::pausable::{EnforcedPause, ExpectedPause};
 
@@ -89,24 +89,6 @@ sol! {
     /// * `operator` - Address that may be allowed to operate on tokens without being their owner.
     #[derive(Debug)]
     error ERC721InvalidOperator(address operator);
-}
-
-/// An ERC-721 error defined as described in [ERC-6093].
-///
-/// [ERC-6093]: https://eips.ethereum.org/EIPS/eip-6093
-#[derive(SolidityError, Debug)]
-pub enum Error {
-    InvalidOwner(ERC721InvalidOwner),
-    NonexistentToken(ERC721NonexistentToken),
-    IncorrectOwner(ERC721IncorrectOwner),
-    InvalidSender(ERC721InvalidSender),
-    InvalidReceiver(ERC721InvalidReceiver),
-    InsufficientApproval(ERC721InsufficientApproval),
-    InvalidApprover(ERC721InvalidApprover),
-    InvalidOperator(ERC721InvalidOperator),
-    // TODO#q: move these errors to shared
-    EnforcedPause(EnforcedPause),
-    ExpectedPause(ExpectedPause),
 }
 
 sol_interface! {
