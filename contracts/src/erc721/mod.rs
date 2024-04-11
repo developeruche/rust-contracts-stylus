@@ -1,6 +1,3 @@
-use core::{borrow::BorrowMut, marker::PhantomData};
-use alloy_primitives::U256;
-use stylus_sdk::{prelude::*, storage::StorageMap};
 use crate::erc721::{
     base::{
         ERC721Base, ERC721BaseOverride, ERC721IncorrectOwner,
@@ -16,11 +13,13 @@ use crate::erc721::{
         },
     },
 };
+use core::borrow::BorrowMut;
+use stylus_sdk::prelude::*;
 
 pub mod base;
 pub mod extensions;
 
-pub(crate) trait Storage<T: ERC721Virtual>:
+pub trait Storage<T: ERC721Virtual>:
     TopLevelStorage
     + BorrowMut<ERC721Burnable<T>>
     + BorrowMut<ERC721Pausable<T>>
@@ -87,7 +86,10 @@ pub enum Error {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use stylus_sdk::storage::StorageBool;
+    use core::marker::PhantomData;
+
+    use alloy_primitives::U256;
+    use stylus_sdk::storage::{StorageBool, StorageMap};
 
     use super::*;
 
@@ -109,9 +111,7 @@ pub(crate) mod tests {
                     },
                     phantom_data: PhantomData,
                 },
-                burnable: ERC721Burnable {
-                    phantom_data: PhantomData,
-                },
+                burnable: ERC721Burnable { phantom_data: PhantomData },
                 pausable: ERC721Pausable {
                     paused: unsafe {
                         // TODO: what should be size of bool with alignment?

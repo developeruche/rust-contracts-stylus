@@ -1,4 +1,4 @@
-#[cfg(any(test, erc721))]
+#[cfg(any(test, feature = "erc721"))]
 pub(crate) mod burnable;
-#[cfg(any(test, erc721))]
+#[cfg(any(test, feature = "erc721"))]
 pub(crate) mod pausable;

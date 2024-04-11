@@ -1,2 +1,2 @@
-#[cfg(any(test, erc20_metadata))]
+#[cfg(any(test, feature = "erc20_metadata"))]
 pub mod metadata;

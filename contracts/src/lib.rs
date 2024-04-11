@@ -8,9 +8,9 @@ extern crate alloc;
 static ALLOC: mini_alloc::MiniAlloc = mini_alloc::MiniAlloc::INIT;
 
 mod arithmetic;
-#[cfg(any(test, erc20))]
+#[cfg(any(test, feature = "erc20"))]
 pub mod erc20;
-#[cfg(any(test, erc721))]
+#[cfg(any(test, feature = "erc721"))]
 pub mod erc721;
 
 #[cfg(not(any(test, target_arch = "wasm32-unknown-unknown")))]

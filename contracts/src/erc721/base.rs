@@ -2,7 +2,7 @@ use core::marker::PhantomData;
 
 use alloy_primitives::{fixed_bytes, Address, FixedBytes, U128, U256};
 use stylus_sdk::{
-    abi::Bytes, alloy_sol_types::sol, call::Call, evm, msg, prelude::*, storage,
+    abi::Bytes, alloy_sol_types::sol, call::Call, evm, msg, prelude::*,
 };
 
 use super::{Error, Storage};
@@ -211,7 +211,7 @@ impl<T: ERC721Virtual> ERC721Base<T> {
             from,
             to,
             token_id,
-            vec![].into(),
+            alloc::vec::Vec::new().into(),
         )
     }
 

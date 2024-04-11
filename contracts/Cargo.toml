@@ -50,4 +50,4 @@ erc721 = []
 # vs being able to run `cargo stylus export-abi`.
 # 
 # This may change in the future, so this behavior should not be relied upon.
-crate-type = ["cdylib"]
+crate-type = ["lib", "cdylib"]

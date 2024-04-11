@@ -1,5 +1,11 @@
 [workspace]
-members = ["contracts", "lib/crypto", "lib/grip", "lib/grip-proc"]
+members = [
+  "contracts",
+  "lib/crypto",
+  "lib/grip",
+  "lib/grip-proc",
+  "examples/erc721",
+]
 # Explicitly set the resolver to version 2, which is the default for packages
 # with edition >= 2021.
 # https://doc.rust-lang.org/edition-guide/rust-2021/default-cargo-resolver.html
@@ -29,3 +35,4 @@ panic = "abort"
 [patch.crates-io.stylus-sdk]
 git = "https://github.com/qalisander/stylus-sdk-rs"
 branch = "patch-0.4.3-restrict-storage-with-attr"
+
