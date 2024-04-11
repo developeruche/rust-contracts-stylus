@@ -443,38 +443,7 @@ impl<T: ERC721Virtual> ERC721Base<T> {
 }
 
 pub struct ERC721BaseOverride;
-impl ERC721Virtual for ERC721BaseOverride {}
-
-pub trait ERC721Virtual: Sized {
-    /// Transfers `token_id` from its current owner to `to`, or alternatively
-    /// mints (or burns) if the current owner (or `to`) is the zero address.
-    /// Returns the owner of the `token_id` before the update.
-    ///
-    /// The `auth` argument is optional. If the value passed is non-zero, then
-    /// this function will check that `auth` is either the owner of the
-    /// token, or approved to operate on the token (by the owner).
-    ///
-    /// NOTE: If overriding this function in a way that tracks balances, see
-    /// also [`Self::_increase_balance`].
-    ///
-    /// # Arguments
-    ///
-    /// * `&mut self` - Write access to the contract's state.
-    /// * `to` - Account of the recipient.
-    /// * `token_id` - Token id as a number.
-    /// * `auth` - Account used for authorization of the update.
-    ///
-    /// # Errors
-    ///
-    /// * If token does not exist and `auth` is not `Address::ZERO` then
-    /// [`Error::NonexistentToken`] is returned.
-    /// * If `auth` is not `Address::ZERO` and `auth` does not have a right to
-    ///   approve this token
-    /// then [`Error::InsufficientApproval`] is returned.
-    ///
-    /// # Events
-    ///
-    /// Emits a [`Transfer`] event.
+impl ERC721Virtual for ERC721BaseOverride {
     fn _update<T: ERC721Virtual>(
         storage: &mut impl Storage<T>,
         to: Address,
@@ -519,6 +488,44 @@ pub trait ERC721Virtual: Sized {
 
         Ok(from)
     }
+}
+
+pub trait ERC721Virtual: Sized {
+    /// Transfers `token_id` from its current owner to `to`, or alternatively
+    /// mints (or burns) if the current owner (or `to`) is the zero address.
+    /// Returns the owner of the `token_id` before the update.
+    ///
+    /// The `auth` argument is optional. If the value passed is non-zero, then
+    /// this function will check that `auth` is either the owner of the
+    /// token, or approved to operate on the token (by the owner).
+    ///
+    /// NOTE: If overriding this function in a way that tracks balances, see
+    /// also [`Self::_increase_balance`].
+    ///
+    /// # Arguments
+    ///
+    /// * `&mut self` - Write access to the contract's state.
+    /// * `to` - Account of the recipient.
+    /// * `token_id` - Token id as a number.
+    /// * `auth` - Account used for authorization of the update.
+    ///
+    /// # Errors
+    ///
+    /// * If token does not exist and `auth` is not `Address::ZERO` then
+    /// [`Error::NonexistentToken`] is returned.
+    /// * If `auth` is not `Address::ZERO` and `auth` does not have a right to
+    ///   approve this token
+    /// then [`Error::InsufficientApproval`] is returned.
+    ///
+    /// # Events
+    ///
+    /// Emits a [`Transfer`] event.
+    fn _update<T: ERC721Virtual>(
+        storage: &mut impl Storage<T>,
+        to: Address,
+        token_id: U256,
+        auth: Address,
+    ) -> Result<Address, Error>;
 }
 
 impl<T: ERC721Virtual> ERC721Base<T> {
