@@ -233,7 +233,7 @@ dependencies = [
  "alloy-primitives 0.3.3",
  "contracts",
  "mini-alloc",
- "stylus-proc",
+ "stylus-proc 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "stylus-sdk",
 ]
 

@@ -1064,7 +1064,7 @@ impl<T: ERC721Virtual> ERC721Base<T> {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 pub mod tests {
     use alloy_primitives::address;
     use once_cell::sync::Lazy;

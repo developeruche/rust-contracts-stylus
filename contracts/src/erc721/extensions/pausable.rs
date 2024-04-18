@@ -81,7 +81,7 @@ impl<Base: ERC721UpdateVirtual> ERC721UpdateVirtual for ERC721PausableUpdateOver
 }
 
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 pub(crate) mod tests {
     use alloy_primitives::address;
     use once_cell::sync::Lazy;
