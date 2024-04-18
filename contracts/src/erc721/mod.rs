@@ -14,19 +14,32 @@ use stylus_sdk::prelude::*;
 /// [ERC-6093]: https://eips.ethereum.org/EIPS/eip-6093
 #[derive(SolidityError, Debug)]
 pub enum Error {
+    /// Indicates that an address can't be an owner.
+    /// For example, `address(0)` is a forbidden owner in ERC-721. Used in
+    /// balance queries.
     InvalidOwner(ERC721InvalidOwner),
+    /// Indicates a `tokenId` whose `owner` is the zero address.
     NonexistentToken(ERC721NonexistentToken),
+    /// Indicates an error related to the ownership over a particular token.
+    /// Used in transfers.
     IncorrectOwner(ERC721IncorrectOwner),
+    /// Indicates a failure with the token `sender`. Used in transfers.
     InvalidSender(ERC721InvalidSender),
+    /// Indicates a failure with the token `receiver`. Used in transfers.
     InvalidReceiver(ERC721InvalidReceiver),
+    /// Indicates a failure with the `operator`’s approval. Used in transfers.
     InsufficientApproval(ERC721InsufficientApproval),
+    /// Indicates a failure with the `approver` of a token to be approved. Used
+    /// in approvals.
     InvalidApprover(ERC721InvalidApprover),
+    /// Indicates a failure with the `operator` to be approved. Used in
+    /// approvals.
     InvalidOperator(ERC721InvalidOperator),
     EnforcedPause(EnforcedPause),
     ExpectedPause(ExpectedPause),
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 pub(crate) mod tests {
     use core::marker::PhantomData;
 
