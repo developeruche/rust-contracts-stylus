@@ -28,4 +28,4 @@ panic = "abort"
 
 [patch.crates-io.stylus-sdk]
 git = "https://github.com/qalisander/stylus-sdk-rs"
-branch = "patch-0.4.3-restrict-storage-with-attr"
+branch = "patch-0.4.3-dependency-injection-for-toplevelstorage"

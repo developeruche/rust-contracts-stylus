@@ -1,72 +1,13 @@
-use core::{borrow::BorrowMut, marker::PhantomData};
-use alloy_primitives::U256;
-use stylus_sdk::{prelude::*, storage::StorageMap};
-use crate::erc721::{
-    base::{
-        ERC721Base, ERC721BaseOverride, ERC721IncorrectOwner,
-        ERC721InsufficientApproval, ERC721InvalidApprover,
-        ERC721InvalidOperator, ERC721InvalidOwner, ERC721InvalidReceiver,
-        ERC721InvalidSender, ERC721NonexistentToken, ERC721Virtual,
-    },
-    extensions::{
-        burnable::{ERC721Burnable, ERC721BurnableOverride},
-        pausable::{
-            ERC721Pausable, ERC721PausableOverride, EnforcedPause,
-            ExpectedPause,
-        },
-    },
-};
-
 pub mod base;
 pub mod extensions;
 
-pub(crate) trait Storage<T: ERC721Virtual>:
-    TopLevelStorage
-    + BorrowMut<ERC721Burnable<T>>
-    + BorrowMut<ERC721Pausable<T>>
-    + BorrowMut<ERC721Base<T>>
-{
-    fn erc721_mut(&mut self) -> &mut ERC721Base<T> {
-        self.borrow_mut()
-    }
-
-    fn erc721(&self) -> &ERC721Base<T> {
-        self.borrow()
-    }
-
-    fn pausable_mut(&mut self) -> &mut ERC721Pausable<T> {
-        self.borrow_mut()
-    }
-
-    fn pausable(&self) -> &ERC721Pausable<T> {
-        self.borrow()
-    }
-}
-
-type ERC721Override =
-    ERC721BurnableOverride<ERC721PausableOverride<ERC721BaseOverride>>;
-
-unsafe impl TopLevelStorage for ERC721 {}
-
-impl Storage<ERC721Override> for ERC721 {}
-
-sol_storage! {
-    pub struct ERC721 {
-        #[borrow]
-        ERC721Base<ERC721Override> erc721;
-        #[borrow]
-        ERC721Burnable<ERC721Override> burnable;
-        #[borrow]
-        ERC721Pausable<ERC721Override> pausable;
-    }
-}
-
-#[external]
-#[inherit(ERC721Burnable<ERC721Override>)]
-#[inherit(ERC721Pausable<ERC721Override>)]
-#[inherit(ERC721Base<ERC721Override>)]
-#[restrict_storage_with(impl Storage<ERC721Override>)]
-impl ERC721 {}
+use base::{
+    ERC721IncorrectOwner, ERC721InsufficientApproval, ERC721InvalidApprover,
+    ERC721InvalidOperator, ERC721InvalidOwner, ERC721InvalidReceiver,
+    ERC721InvalidSender, ERC721NonexistentToken,
+};
+use extensions::pausable::{EnforcedPause, ExpectedPause};
+use stylus_sdk::prelude::*;
 
 /// An ERC-721 error defined as described in [ERC-6093].
 ///
@@ -87,9 +28,59 @@ pub enum Error {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use stylus_sdk::storage::StorageBool;
+    use core::marker::PhantomData;
+
+    use alloy_primitives::U256;
+    use stylus_sdk::storage::{StorageBool, StorageMap};
 
     use super::*;
+    use crate::erc721::{
+        base::{ERC721Base, ERC721BaseOverride},
+        extensions::{
+            burnable::{ERC721Burnable, ERC721BurnableOverride},
+            pausable::{ERC721Pausable, ERC721PausableOverride},
+        },
+    };
+
+    pub(crate) type ERC721Override =
+        ERC721BurnableOverride<ERC721PausableOverride<ERC721BaseOverride>>;
+
+    sol_storage! {
+        pub struct ERC721 {
+            #[borrow]
+            ERC721Base<ERC721Override> erc721;
+            #[borrow]
+            ERC721Burnable<ERC721Override> burnable;
+            #[borrow]
+            ERC721Pausable<ERC721Override> pausable;
+        }
+    }
+
+    #[external]
+    #[inherit(ERC721Burnable<ERC721Override>)]
+    #[inherit(ERC721Pausable<ERC721Override>)]
+    #[inherit(ERC721Base<ERC721Override>)]
+    impl ERC721 {}
+
+    unsafe impl TopLevelStorage for ERC721 {
+        fn get_storage<T: 'static>(&mut self) -> &mut T {
+            use core::any::{Any, TypeId};
+            if TypeId::of::<T>() == TypeId::of::<Self>() {
+                unsafe { core::mem::transmute::<_, _>(self) }
+            } else if TypeId::of::<T>() == self.erc721.type_id() {
+                unsafe { core::mem::transmute::<_, _>(&mut self.erc721) }
+            } else if TypeId::of::<T>() == self.pausable.type_id() {
+                unsafe { core::mem::transmute::<_, _>(&mut self.pausable) }
+            } else if TypeId::of::<T>() == self.burnable.type_id() {
+                unsafe { core::mem::transmute::<_, _>(&mut self.burnable) }
+            } else {
+                panic!(
+                    "storage for type doesn't exist - type name is {}",
+                    core::any::type_name::<T>()
+                )
+            }
+        }
+    }
 
     impl Default for ERC721 {
         fn default() -> Self {
@@ -109,9 +100,7 @@ pub(crate) mod tests {
                     },
                     phantom_data: PhantomData,
                 },
-                burnable: ERC721Burnable {
-                    phantom_data: PhantomData,
-                },
+                burnable: ERC721Burnable { phantom_data: PhantomData },
                 pausable: ERC721Pausable {
                     paused: unsafe {
                         // TODO: what should be size of bool with alignment?

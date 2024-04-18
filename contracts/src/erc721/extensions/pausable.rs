@@ -1,10 +1,8 @@
 use core::marker::PhantomData;
-
 use alloy_primitives::Address;
 use alloy_sol_types::sol;
 use stylus_sdk::{alloy_primitives::U256, evm, msg, prelude::*};
-
-use crate::erc721::{base::ERC721Virtual, Error, Storage};
+use crate::erc721::{base::ERC721Virtual, Error, TopLevelStorage};
 use crate::erc721::base::ERC721UpdateVirtual;
 
 sol_storage! {
@@ -31,7 +29,6 @@ sol! {
 }
 
 #[external]
-#[restrict_storage_with(impl Storage<T>)]
 impl<T: ERC721Virtual> ERC721Pausable<T> {
     /// ERC-721 Pausable implementation
     /// ERC-721 token with pausable token transfers, minting and burning.
@@ -72,14 +69,14 @@ pub struct ERC721PausableUpdateOverride<T: ERC721UpdateVirtual>(PhantomData<T>);
 
 impl<Base: ERC721UpdateVirtual> ERC721UpdateVirtual for ERC721PausableUpdateOverride<Base> {
     fn call<This: ERC721Virtual>(
-        storage: &mut impl Storage<This>,
+        storage: &mut impl TopLevelStorage,
         to: Address,
         token_id: U256,
         auth: Address,
     ) -> Result<Address, Error> {
-        let pausable: &ERC721Pausable<This> = storage.borrow();
+        let pausable: &mut ERC721Pausable<This> = storage.get_storage();
         pausable.require_not_paused()?;
-        Base::call(storage, to, token_id, auth)
+        Base::call::<This>(storage, to, token_id, auth)
     }
 }
 
@@ -91,8 +88,9 @@ pub(crate) mod tests {
 
     use super::*;
     use crate::erc721::{
-        base::ERC721Base, tests::random_token_id, Storage, ERC721,
+        base::ERC721Base, tests::random_token_id, TopLevelStorage, tests::ERC721,
     };
+    use crate::erc721::tests::ERC721Override;
 
     static ALICE: Lazy<Address> = Lazy::new(msg::sender);
 
@@ -101,14 +99,15 @@ pub(crate) mod tests {
     #[grip::test]
     fn error_transfer_while_paused(storage: ERC721) {
         let token_id = random_token_id();
-        ERC721Base::_mint(storage, *ALICE, token_id)
+        ERC721Base::<ERC721Override>::_mint(storage, *ALICE, token_id)
             .expect("mint a token to Alice");
 
-        storage.pausable_mut().pause();
-        let paused = storage.pausable_mut().paused();
+        let pausable: &mut ERC721Pausable<ERC721Override> = storage.get_storage();
+        pausable.pause();
+        let paused = pausable.paused();
         assert!(paused);
 
-        let err = ERC721Base::transfer_from(storage, *ALICE, BOB, token_id)
+        let err = ERC721Base::<ERC721Override>::transfer_from(storage, *ALICE, BOB, token_id)
             .expect_err("should not transfer from paused contract");
 
         assert!(matches!(err, Error::EnforcedPause(_)));

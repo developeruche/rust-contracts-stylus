@@ -5,7 +5,7 @@ use stylus_sdk::{
     abi::Bytes, alloy_sol_types::sol, call::Call, evm, msg, prelude::*, storage,
 };
 
-use super::{Error, Storage};
+use super::{Error, TopLevelStorage};
 use crate::arithmetic::{AddAssignUnchecked, SubAssignUnchecked};
 
 sol! {
@@ -121,7 +121,6 @@ sol_storage! {
 }
 
 #[external]
-#[restrict_storage_with(impl Storage<T>)]
 impl<T: ERC721Virtual> ERC721Base<T> {
     /// Returns the number of tokens in `owner`'s account.
     ///
@@ -200,7 +199,7 @@ impl<T: ERC721Virtual> ERC721Base<T> {
     ///
     /// Emits a [`Transfer`] event.
     pub fn safe_transfer_from(
-        storage: &mut impl Storage<T>,
+        storage: &mut impl TopLevelStorage,
         from: Address,
         to: Address,
         token_id: U256,
@@ -256,7 +255,7 @@ impl<T: ERC721Virtual> ERC721Base<T> {
     /// Emits a [`Transfer`] event.
     #[selector(name = "safeTransferFrom")]
     pub fn safe_transfer_from_with_data(
-        storage: &mut impl Storage<T>,
+        storage: &mut impl TopLevelStorage,
         from: Address,
         to: Address,
         token_id: U256,
@@ -311,7 +310,7 @@ impl<T: ERC721Virtual> ERC721Base<T> {
     ///
     /// Emits a [`Transfer`] event.
     pub fn transfer_from(
-        storage: &mut impl Storage<T>,
+        storage: &mut impl TopLevelStorage,
         from: Address,
         to: Address,
         token_id: U256,
@@ -325,7 +324,7 @@ impl<T: ERC721Virtual> ERC721Base<T> {
         // Setting an "auth" argument enables the `_is_authorized` check which
         // verifies that the token exists (`from != 0`). Therefore, it is
         // not needed to verify that the return value is not 0 here.
-        let previous_owner = T::Update::call(storage, to, token_id, msg::sender())?;
+        let previous_owner = T::Update::call::<T>(storage, to, token_id, msg::sender())?;
         if previous_owner != from {
             return Err(ERC721IncorrectOwner {
                 sender: from,
@@ -442,7 +441,7 @@ impl<T: ERC721Virtual> ERC721Base<T> {
     }
 }
 
-pub trait ERC721Virtual {
+pub trait ERC721Virtual: 'static {
     type Update: ERC721UpdateVirtual;
 }
 
@@ -483,7 +482,7 @@ pub trait ERC721UpdateVirtual {
     ///
     /// Emits a [`Transfer`] event.
     fn call<T: ERC721Virtual>(
-        storage: &mut impl Storage<T>,
+        storage: &mut impl TopLevelStorage,
         to: Address,
         token_id: U256,
         auth: Address,
@@ -494,30 +493,30 @@ pub struct ERC721BaseUpdateOverride;
 
 impl ERC721UpdateVirtual for ERC721BaseUpdateOverride {
     fn call<T: ERC721Virtual>(
-        storage: &mut impl Storage<T>,
+        storage: &mut impl TopLevelStorage,
         to: Address,
         token_id: U256,
         auth: Address,
     ) -> Result<Address, Error> {
-        let from = storage.erc721()._owner_of_inner(token_id);
+        let storage: &mut ERC721Base<T> = storage.get_storage();
+        let from = storage._owner_of_inner(token_id);
 
         // Perform (optional) operator check.
         if !auth.is_zero() {
-            storage.erc721()._check_authorized(from, auth, token_id)?;
+            storage._check_authorized(from, auth, token_id)?;
         }
 
         // Execute the update.
         if !from.is_zero() {
             // Clear approval. No need to re-authorize or emit the Approval
             // event.
-            storage.erc721_mut()._approve(
+            storage._approve(
                 Address::ZERO,
                 token_id,
                 Address::ZERO,
                 false,
             )?;
             storage
-                .erc721_mut()
                 ._balances
                 .setter(from)
                 .sub_assign_unchecked(U256::from(1));
@@ -525,13 +524,12 @@ impl ERC721UpdateVirtual for ERC721BaseUpdateOverride {
 
         if !to.is_zero() {
             storage
-                .erc721_mut()
                 ._balances
                 .setter(to)
                 .add_assign_unchecked(U256::from(1));
         }
 
-        storage.erc721_mut()._owners.setter(token_id).set(to);
+        storage._owners.setter(token_id).set(to);
 
         evm::log(Transfer { from, to, token_id });
 
@@ -682,7 +680,7 @@ impl<T: ERC721Virtual> ERC721Base<T> {
     ///
     /// Emits a [`Transfer`] event.
     pub fn _mint(
-        storage: &mut impl Storage<T>,
+        storage: &mut impl TopLevelStorage,
         to: Address,
         token_id: U256,
     ) -> Result<(), Error> {
@@ -692,7 +690,7 @@ impl<T: ERC721Virtual> ERC721Base<T> {
             );
         }
 
-        let previous_owner = T::Update::call(storage, to, token_id, Address::ZERO)?;
+        let previous_owner = T::Update::call::<T>(storage, to, token_id, Address::ZERO)?;
         if !previous_owner.is_zero() {
             return Err(ERC721InvalidSender { sender: Address::ZERO }.into());
         }
@@ -733,7 +731,7 @@ impl<T: ERC721Virtual> ERC721Base<T> {
     ///
     /// Emits a [`Transfer`] event.
     pub fn _safe_mint(
-        storage: &mut impl Storage<T>,
+        storage: &mut impl TopLevelStorage,
         to: Address,
         token_id: U256,
         data: Bytes,
@@ -772,11 +770,11 @@ impl<T: ERC721Virtual> ERC721Base<T> {
     ///
     /// Emits a [`Transfer`] event.
     pub fn _burn(
-        storage: &mut impl Storage<T>,
+        storage: &mut impl TopLevelStorage,
         token_id: U256,
     ) -> Result<(), Error> {
         let previous_owner =
-            T::Update::call(storage, Address::ZERO, token_id, Address::ZERO)?;
+            T::Update::call::<T>(storage, Address::ZERO, token_id, Address::ZERO)?;
         if previous_owner.is_zero() {
             Err(ERC721NonexistentToken { token_id }.into())
         } else {
@@ -814,7 +812,7 @@ impl<T: ERC721Virtual> ERC721Base<T> {
     ///
     /// Emits a [`Transfer`] event.
     pub fn _transfer(
-        storage: &mut impl Storage<T>,
+        storage: &mut impl TopLevelStorage,
         from: Address,
         to: Address,
         token_id: U256,
@@ -825,7 +823,7 @@ impl<T: ERC721Virtual> ERC721Base<T> {
             );
         }
 
-        let previous_owner = T::Update::call(storage, to, token_id, Address::ZERO)?;
+        let previous_owner = T::Update::call::<T>(storage, to, token_id, Address::ZERO)?;
         if previous_owner.is_zero() {
             Err(ERC721NonexistentToken { token_id }.into())
         } else if previous_owner != from {
@@ -882,7 +880,7 @@ impl<T: ERC721Virtual> ERC721Base<T> {
     ///
     /// Emits a [`Transfer`] event.
     pub fn _safe_transfer(
-        storage: &mut impl Storage<T>,
+        storage: &mut impl TopLevelStorage,
         from: Address,
         to: Address,
         token_id: U256,
@@ -1033,7 +1031,7 @@ impl<T: ERC721Virtual> ERC721Base<T> {
     ///   interface id or returned with error then [`Error::InvalidReceiver`] is
     ///   returned.
     pub fn _check_on_erc721_received(
-        storage: &mut impl Storage<T>,
+        storage: &mut impl TopLevelStorage,
         operator: Address,
         from: Address,
         to: Address,
@@ -1072,7 +1070,7 @@ pub mod tests {
     use once_cell::sync::Lazy;
 
     use super::*;
-    use crate::erc721::{tests::random_token_id, Storage, ERC721};
+    use crate::erc721::{TopLevelStorage, tests::{random_token_id, ERC721, ERC721Override}};
 
     // NOTE: Alice is always the sender of the message
     static ALICE: Lazy<Address> = Lazy::new(msg::sender);
@@ -1082,16 +1080,16 @@ pub mod tests {
     #[grip::test]
     fn mint(storage: ERC721) {
         let token_id = random_token_id();
-        ERC721Base::_mint(storage, *ALICE, token_id)
+        ERC721Base::<ERC721Override>::_mint(storage, *ALICE, token_id)
             .expect("mint a token for Alice");
         let owner = storage
-            .erc721()
+            .erc721
             .owner_of(token_id)
             .expect("get the owner of the token");
         assert_eq!(owner, *ALICE);
 
         let balance = storage
-            .erc721()
+            .erc721
             .balance_of(*ALICE)
             .expect("get the balance of Alice");
         let one = U256::from(1);
@@ -1101,9 +1099,9 @@ pub mod tests {
     #[grip::test]
     fn error_when_reusing_token_id(storage: ERC721) {
         let token_id = random_token_id();
-        ERC721Base::_mint(storage, *ALICE, token_id)
+        ERC721Base::<ERC721Override>::_mint(storage, *ALICE, token_id)
             .expect("mint the token a first time");
-        let err = ERC721Base::_mint(storage, *ALICE, token_id)
+        let err = ERC721Base::<ERC721Override>::_mint(storage, *ALICE, token_id)
             .expect_err("should not mint a token id twice");
         assert!(matches!(
             err,
@@ -1114,12 +1112,12 @@ pub mod tests {
     #[grip::test]
     fn transfer(storage: ERC721) {
         let token_id = random_token_id();
-        ERC721Base::_mint(storage, *ALICE, token_id)
+        ERC721Base::<ERC721Override>::_mint(storage, *ALICE, token_id)
             .expect("mint a token to Alice");
-        ERC721Base::transfer_from(storage, *ALICE, BOB, token_id)
+        ERC721Base::<ERC721Override>::transfer_from(storage, *ALICE, BOB, token_id)
             .expect("transfer from Alice to Bob");
         let owner = storage
-            .erc721()
+            .erc721
             .owner_of(token_id)
             .expect("get the owner of the token");
         assert_eq!(owner, BOB);
@@ -1128,7 +1126,7 @@ pub mod tests {
     #[grip::test]
     fn error_when_transfer_nonexistent_token(storage: ERC721) {
         let token_id = random_token_id();
-        let err = ERC721Base::transfer_from(storage, *ALICE, BOB, token_id)
+        let err = ERC721Base::<ERC721Override>::transfer_from(storage, *ALICE, BOB, token_id)
             .expect_err("should not transfer a non existent token");
         assert!(matches!(
             err,
@@ -1141,23 +1139,23 @@ pub mod tests {
     #[grip::test]
     fn approve_token_transfer(storage: ERC721) {
         let token_id = random_token_id();
-        ERC721Base::_mint(storage, *ALICE, token_id).expect("mint token");
+        ERC721Base::<ERC721Override>::_mint(storage, *ALICE, token_id).expect("mint token");
         storage
-            .erc721_mut()
+            .erc721
             .approve(BOB, token_id)
             .expect("approve bob for operations on token");
-        assert_eq!(storage.erc721()._token_approvals.get(token_id), BOB);
+        assert_eq!(storage.erc721._token_approvals.get(token_id), BOB);
     }
 
     #[grip::test]
     fn transfer_approved_token(storage: ERC721) {
         let token_id = random_token_id();
-        ERC721Base::_mint(storage, BOB, token_id).expect("mint token to Bob");
-        storage.erc721_mut()._token_approvals.setter(token_id).set(*ALICE);
-        ERC721Base::transfer_from(storage, BOB, *ALICE, token_id)
+        ERC721Base::<ERC721Override>::_mint(storage, BOB, token_id).expect("mint token to Bob");
+        storage.erc721._token_approvals.setter(token_id).set(*ALICE);
+        ERC721Base::<ERC721Override>::transfer_from(storage, BOB, *ALICE, token_id)
             .expect("transfer Bob's token to Alice");
         let owner = storage
-            .erc721()
+            .erc721
             .owner_of(token_id)
             .expect("get the owner of the token");
         assert_eq!(owner, *ALICE);
@@ -1166,8 +1164,8 @@ pub mod tests {
     #[grip::test]
     fn error_when_transfer_unapproved_token(storage: ERC721) {
         let token_id = random_token_id();
-        ERC721Base::_mint(storage, BOB, token_id).expect("mint token to Bob");
-        let err = ERC721Base::transfer_from(storage, BOB, *ALICE, token_id)
+        ERC721Base::<ERC721Override>::_mint(storage, BOB, token_id).expect("mint token to Bob");
+        let err = ERC721Base::<ERC721Override>::transfer_from(storage, BOB, *ALICE, token_id)
             .expect_err("should not transfer unapproved token");
         assert!(matches!(
             err,
