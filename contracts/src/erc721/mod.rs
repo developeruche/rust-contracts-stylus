@@ -44,10 +44,10 @@ pub enum Error {
 }
 
 #[derive(Debug)]
-pub struct ERC721CustomError(Vec<u8>);
+pub struct ERC721CustomError(alloc::vec::Vec<u8>);
 
 impl MethodError for ERC721CustomError {
-    fn encode(self) -> Vec<u8> {
+    fn encode(self) -> alloc::vec::Vec<u8> {
         self.0
     }
 }
@@ -64,7 +64,7 @@ pub(crate) mod tests {
     use core::marker::PhantomData;
 
     use alloy_primitives::U256;
-    use stylus_sdk::storage::{InnerStorage, StorageBool, StorageMap};
+    use stylus_sdk::storage::{StorageBool, StorageMap};
 
     use super::*;
     use crate::erc721::{
@@ -75,6 +75,8 @@ pub(crate) mod tests {
         },
     };
 
+    // TODO#q: create macro that generates this type from the list of types
+    // (in case there are many long generic types)  
     pub(crate) type ERC721Override =
         ERC721BurnableOverride<ERC721PausableOverride<ERC721BaseOverride>>;
 
@@ -97,6 +99,7 @@ pub(crate) mod tests {
 
     unsafe impl TopLevelStorage for ERC721 {
         fn get_storage<S: 'static>(&mut self) -> &mut S {
+            use stylus_sdk::storage::InnerStorage;
             unsafe {
                 self.try_get_storage().unwrap_or_else(|| {
                     panic!(

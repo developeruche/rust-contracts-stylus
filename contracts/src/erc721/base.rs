@@ -220,7 +220,7 @@ impl<V: ERC721Virtual> ERC721Base<V> {
             from,
             to,
             token_id,
-            vec![].into(),
+            alloc::vec![].into(),
         )
     }
 

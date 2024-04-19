@@ -53,7 +53,7 @@ dependencies = [
  "heck",
  "proc-macro2",
  "quote",
- "syn 2.0.58",
+ "syn 2.0.60",
  "syn-solidity",
  "tiny-keccak",
 ]
@@ -238,6 +238,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "erc721-example"
+version = "0.0.0"
+dependencies = [
+ "alloy-primitives 0.3.3",
+ "alloy-sol-types",
+ "contracts",
+ "mini-alloc",
+ "stylus-proc 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "stylus-sdk",
+]
+
+[[package]]
 name = "generic-array"
 version = "0.14.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -274,7 +286,7 @@ version = "0.1.0"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.58",
+ "syn 2.0.60",
 ]
 
 [[package]]
@@ -380,9 +392,9 @@ checksum = "5b40af805b3121feab8a3c29f04d8ad262fa8e0561883e7653e024ae4479e6de"
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.79"
+version = "1.0.81"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e835ff2298f5721608eb1a980ecaee1aef2c132bf95ecc026a11b7bf3c01c02e"
+checksum = "3d1597b0c024618f09a9c3b8655b7e430397a36d23fdafec26d6965e9eec3eba"
 dependencies = [
  "unicode-ident",
 ]
@@ -403,9 +415,9 @@ dependencies = [
 
 [[package]]
 name = "quote"
-version = "1.0.35"
+version = "1.0.36"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "291ec9ab5efd934aaf503a6466c5d5251535d108ee747472c3977cc5acc868ef"
+checksum = "0fa76aaf39101c457836aec0ce2316dbdc3ab723cdda1c6bd4e6ad4208acaca7"
 dependencies = [
  "proc-macro2",
 ]
@@ -515,22 +527,22 @@ checksum = "92d43fe69e652f3df9bdc2b85b2854a0825b86e4fb76bc44d945137d053639ca"
 
 [[package]]
 name = "serde"
-version = "1.0.197"
+version = "1.0.198"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3fb1c873e1b9b056a4dc4c0c198b24c3ffa059243875552b2bd0933b1aee4ce2"
+checksum = "9846a40c979031340571da2545a4e5b7c4163bdae79b301d5f86d03979451fcc"
 dependencies = [
  "serde_derive",
 ]
 
 [[package]]
 name = "serde_derive"
-version = "1.0.197"
+version = "1.0.198"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7eb0b34b42edc17f6b7cac84a52a1c5f0e1bb2227e997ca9011ea3dd34e8610b"
+checksum = "e88edab869b01783ba905e7d0153f9fc1a6505a96e4ad3018011eedb838566d9"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.58",
+ "syn 2.0.60",
 ]
 
 [[package]]
@@ -565,7 +577,7 @@ dependencies = [
 [[package]]
 name = "stylus-proc"
 version = "0.4.3"
-source = "git+https://github.com/qalisander/stylus-sdk-rs?branch=patch-0.4.3-dependency-injection-for-toplevelstorage#6e5a1756522cd86493a27226dfedfec924f9a58d"
+source = "git+https://github.com/qalisander/stylus-sdk-rs?branch=patch-0.4.3-dependency-injection-for-toplevelstorage#8c655e89c0ee6afd24a82dd38eb2b9d7cd1998c1"
 dependencies = [
  "alloy-primitives 0.3.3",
  "alloy-sol-types",
@@ -583,7 +595,7 @@ dependencies = [
 [[package]]
 name = "stylus-sdk"
 version = "0.4.3"
-source = "git+https://github.com/qalisander/stylus-sdk-rs?branch=patch-0.4.3-dependency-injection-for-toplevelstorage#6e5a1756522cd86493a27226dfedfec924f9a58d"
+source = "git+https://github.com/qalisander/stylus-sdk-rs?branch=patch-0.4.3-dependency-injection-for-toplevelstorage#8c655e89c0ee6afd24a82dd38eb2b9d7cd1998c1"
 dependencies = [
  "alloy-primitives 0.3.3",
  "alloy-sol-types",
@@ -608,9 +620,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "2.0.58"
+version = "2.0.60"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "44cfb93f38070beee36b3fef7d4f5a16f27751d94b187b666a5cc5e9b0d30687"
+checksum = "909518bc7b1c9b779f1bbf07f2929d35af9f0f37e47c6e9ef7f9dddc1e1821f3"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -625,7 +637,7 @@ checksum = "e5f995d2140b0f751dbe94365be2591edbf3d1b75dcfaeac14183abbd2ff07bd"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.58",
+ "syn 2.0.60",
 ]
 
 [[package]]
