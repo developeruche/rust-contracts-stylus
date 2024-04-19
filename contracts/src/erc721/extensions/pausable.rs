@@ -6,9 +6,9 @@ use crate::erc721::{base::ERC721Virtual, Error, TopLevelStorage};
 use crate::erc721::base::ERC721UpdateVirtual;
 
 sol_storage! {
-    pub struct ERC721Pausable<T> {
-        bool paused;
-        PhantomData<T> phantom_data;
+    pub struct ERC721Pausable<T: ERC721Virtual> {
+        bool _paused;
+        PhantomData<T> _phantom_data;
     }
 }
 
@@ -37,7 +37,7 @@ impl<T: ERC721Virtual> ERC721Pausable<T> {
     /// evaluation period, or having an emergency switch for freezing all
     /// token transfers in the event of a large bug.
     pub fn paused(&self) -> bool {
-        *self.paused
+        *self._paused
     }
 
     /// Triggers stopped state.
@@ -45,7 +45,7 @@ impl<T: ERC721Virtual> ERC721Pausable<T> {
     /// Requirements:
     /// - The contract must not be paused.
     pub fn pause(&mut self) {
-        self.paused.set(true);
+        self._paused.set(true);
         evm::log(Paused { account: msg::sender() });
     }
 

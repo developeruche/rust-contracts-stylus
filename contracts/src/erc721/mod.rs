@@ -44,7 +44,7 @@ pub(crate) mod tests {
     use core::marker::PhantomData;
 
     use alloy_primitives::U256;
-    use stylus_sdk::storage::{StorageBool, StorageMap};
+    use stylus_sdk::storage::{InnerStorage, StorageBool, StorageMap};
 
     use super::*;
     use crate::erc721::{
@@ -76,21 +76,14 @@ pub(crate) mod tests {
     impl ERC721 {}
 
     unsafe impl TopLevelStorage for ERC721 {
-        fn get_storage<T: 'static>(&mut self) -> &mut T {
-            use core::any::{Any, TypeId};
-            if TypeId::of::<T>() == TypeId::of::<Self>() {
-                unsafe { core::mem::transmute::<_, _>(self) }
-            } else if TypeId::of::<T>() == self.erc721.type_id() {
-                unsafe { core::mem::transmute::<_, _>(&mut self.erc721) }
-            } else if TypeId::of::<T>() == self.pausable.type_id() {
-                unsafe { core::mem::transmute::<_, _>(&mut self.pausable) }
-            } else if TypeId::of::<T>() == self.burnable.type_id() {
-                unsafe { core::mem::transmute::<_, _>(&mut self.burnable) }
-            } else {
-                panic!(
-                    "storage for type doesn't exist - type name is {}",
-                    core::any::type_name::<T>()
-                )
+        fn get_storage<S: 'static>(&mut self) -> &mut S {
+            unsafe {
+                self.try_get_storage().unwrap_or_else(|| {
+                    panic!(
+                        "storage for type doesn't exist - type name is {}",
+                        core::any::type_name::<S>()
+                    )
+                })
             }
         }
     }
@@ -113,13 +106,13 @@ pub(crate) mod tests {
                     },
                     phantom_data: PhantomData,
                 },
-                burnable: ERC721Burnable { phantom_data: PhantomData },
+                burnable: ERC721Burnable { _phantom_data: PhantomData },
                 pausable: ERC721Pausable {
-                    paused: unsafe {
+                    _paused: unsafe {
                         // TODO: what should be size of bool with alignment?
                         StorageBool::new(root + U256::from(128), 0)
                     },
-                    phantom_data: PhantomData,
+                    _phantom_data: PhantomData,
                 },
             }
         }

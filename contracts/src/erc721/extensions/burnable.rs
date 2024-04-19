@@ -1,16 +1,11 @@
 use core::marker::PhantomData;
-
 use alloy_primitives::Address;
 use stylus_sdk::{alloy_primitives::U256, msg, prelude::*};
-
-use crate::erc721::{
-    base::{ERC721UpdateVirtual, ERC721Virtual},
-    Error, TopLevelStorage,
-};
+use crate::erc721::{base::{ERC721UpdateVirtual, ERC721Virtual}, Error, TopLevelStorage};
 
 sol_storage! {
     pub struct ERC721Burnable<T: ERC721Virtual> {
-        PhantomData<T> phantom_data;
+        PhantomData<T> _phantom_data;
     }
 }
 

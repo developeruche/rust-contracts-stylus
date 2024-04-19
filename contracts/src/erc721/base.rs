@@ -1,10 +1,8 @@
 use core::marker::PhantomData;
-
 use alloy_primitives::{fixed_bytes, Address, FixedBytes, U128, U256};
 use stylus_sdk::{
     abi::Bytes, alloy_sol_types::sol, call::Call, evm, msg, prelude::*, storage,
 };
-
 use super::{Error, TopLevelStorage};
 use crate::arithmetic::{AddAssignUnchecked, SubAssignUnchecked};
 
@@ -119,6 +117,18 @@ sol_storage! {
         PhantomData<T> phantom_data;
     }
 }
+
+// impl<V: ERC721Virtual> Storage for ERC721Base<V>{
+//     fn try_get_storage<S: 'static>(&mut self) -> Option<&mut S> {
+//         use std::any::TypeId;
+//         let this = if TypeId::of::<S>() == TypeId::of::<Self>() {
+//             Some(unsafe { core::mem::transmute::<_, _>(self) })
+//         } else {
+//             None
+//         };
+//         this
+//     }
+// }
 
 #[external]
 impl<T: ERC721Virtual> ERC721Base<T> {
