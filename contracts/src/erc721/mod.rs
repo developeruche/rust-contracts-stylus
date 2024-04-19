@@ -1,6 +1,8 @@
 pub mod base;
 pub mod extensions;
 
+use alloy_sol_types::{SolError, SolType};
+use stylus_sdk::call::MethodError;
 use base::{
     ERC721IncorrectOwner, ERC721InsufficientApproval, ERC721InvalidApprover,
     ERC721InvalidOperator, ERC721InvalidOwner, ERC721InvalidReceiver,
@@ -37,7 +39,25 @@ pub enum Error {
     InvalidOperator(ERC721InvalidOperator),
     EnforcedPause(EnforcedPause),
     ExpectedPause(ExpectedPause),
+    /// Let to return custom user error from overridden function
+    Custom(ERC721CustomError)
 }
+
+#[derive(Debug)]
+pub struct ERC721CustomError(Vec<u8>);
+
+impl MethodError for ERC721CustomError {
+    fn encode(self) -> Vec<u8> {
+        self.0
+    }
+}
+
+impl<T: SolError> From<T> for ERC721CustomError {
+    fn from(value: T) -> Self {
+        ERC721CustomError(value.encode())
+    }
+}
+
 
 #[cfg(all(test, feature = "std"))]
 pub(crate) mod tests {
