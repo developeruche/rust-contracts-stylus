@@ -61,8 +61,8 @@ impl<V: ERC721Virtual> ERC721Pausable<V> {
 // TODO#q: derive with auto implementation ERC721Virtual
 pub struct ERC721PausableOverride<V: ERC721Virtual>(V);
 
-impl<V: ERC721Virtual> ERC721Virtual for ERC721PausableOverride<V> {
-    type Update = ERC721PausableUpdateOverride<V::Update>;
+impl<Base: ERC721Virtual> ERC721Virtual for ERC721PausableOverride<Base> {
+    type Update = ERC721PausableUpdateOverride<Base::Update>;
 }
 
 pub struct ERC721PausableUpdateOverride<V: ERC721UpdateVirtual>(V);
