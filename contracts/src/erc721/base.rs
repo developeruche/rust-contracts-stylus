@@ -105,7 +105,7 @@ sol_interface! {
 }
 
 sol_storage! {
-    pub struct ERC721Base<T: ERC721Virtual> {
+    pub struct ERC721Base<V: ERC721Virtual> {
         mapping(uint256 => address) _owners;
 
         mapping(address => uint256) _balances;
@@ -114,7 +114,7 @@ sol_storage! {
 
         mapping(address => mapping(address => bool)) _operator_approvals;
 
-        PhantomData<T> phantom_data;
+        PhantomData<V> _phantom_data;
     }
 }
 
@@ -131,7 +131,7 @@ sol_storage! {
 // }
 
 #[external]
-impl<T: ERC721Virtual> ERC721Base<T> {
+impl<V: ERC721Virtual> ERC721Base<V> {
     /// Returns the number of tokens in `owner`'s account.
     ///
     /// # Arguments
@@ -334,7 +334,7 @@ impl<T: ERC721Virtual> ERC721Base<T> {
         // Setting an "auth" argument enables the `_is_authorized` check which
         // verifies that the token exists (`from != 0`). Therefore, it is
         // not needed to verify that the return value is not 0 here.
-        let previous_owner = T::Update::call::<T>(storage, to, token_id, msg::sender())?;
+        let previous_owner = V::Update::call::<V>(storage, to, token_id, msg::sender())?;
         if previous_owner != from {
             return Err(ERC721IncorrectOwner {
                 sender: from,
@@ -491,7 +491,7 @@ pub trait ERC721UpdateVirtual {
     /// # Events
     ///
     /// Emits a [`Transfer`] event.
-    fn call<T: ERC721Virtual>(
+    fn call<V: ERC721Virtual>(
         storage: &mut impl TopLevelStorage,
         to: Address,
         token_id: U256,
@@ -502,13 +502,13 @@ pub trait ERC721UpdateVirtual {
 pub struct ERC721BaseUpdateOverride;
 
 impl ERC721UpdateVirtual for ERC721BaseUpdateOverride {
-    fn call<T: ERC721Virtual>(
+    fn call<V: ERC721Virtual>(
         storage: &mut impl TopLevelStorage,
         to: Address,
         token_id: U256,
         auth: Address,
     ) -> Result<Address, Error> {
-        let storage: &mut ERC721Base<T> = storage.get_storage();
+        let storage: &mut ERC721Base<V> = storage.get_storage();
         let from = storage._owner_of_inner(token_id);
 
         // Perform (optional) operator check.
@@ -547,7 +547,7 @@ impl ERC721UpdateVirtual for ERC721BaseUpdateOverride {
     }
 }
 
-impl<T: ERC721Virtual> ERC721Base<T> {
+impl<V: ERC721Virtual> ERC721Base<V> {
     /// Returns the owner of the `token_id`. Does NOT revert if the token
     /// doesn't exist.
     ///
@@ -700,7 +700,7 @@ impl<T: ERC721Virtual> ERC721Base<T> {
             );
         }
 
-        let previous_owner = T::Update::call::<T>(storage, to, token_id, Address::ZERO)?;
+        let previous_owner = V::Update::call::<V>(storage, to, token_id, Address::ZERO)?;
         if !previous_owner.is_zero() {
             return Err(ERC721InvalidSender { sender: Address::ZERO }.into());
         }
@@ -784,7 +784,7 @@ impl<T: ERC721Virtual> ERC721Base<T> {
         token_id: U256,
     ) -> Result<(), Error> {
         let previous_owner =
-            T::Update::call::<T>(storage, Address::ZERO, token_id, Address::ZERO)?;
+            V::Update::call::<V>(storage, Address::ZERO, token_id, Address::ZERO)?;
         if previous_owner.is_zero() {
             Err(ERC721NonexistentToken { token_id }.into())
         } else {
@@ -833,7 +833,7 @@ impl<T: ERC721Virtual> ERC721Base<T> {
             );
         }
 
-        let previous_owner = T::Update::call::<T>(storage, to, token_id, Address::ZERO)?;
+        let previous_owner = V::Update::call::<V>(storage, to, token_id, Address::ZERO)?;
         if previous_owner.is_zero() {
             Err(ERC721NonexistentToken { token_id }.into())
         } else if previous_owner != from {
@@ -1080,7 +1080,7 @@ pub mod tests {
     use once_cell::sync::Lazy;
 
     use super::*;
-    use crate::erc721::{TopLevelStorage, tests::{random_token_id, ERC721, ERC721Override}};
+    use crate::erc721::{tests::{random_token_id, ERC721, ERC721Override}};
 
     // NOTE: Alice is always the sender of the message
     static ALICE: Lazy<Address> = Lazy::new(msg::sender);

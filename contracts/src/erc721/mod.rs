@@ -104,7 +104,7 @@ pub(crate) mod tests {
                     _operator_approvals: unsafe {
                         StorageMap::new(root + U256::from(96), 0)
                     },
-                    phantom_data: PhantomData,
+                    _phantom_data: PhantomData,
                 },
                 burnable: ERC721Burnable { _phantom_data: PhantomData },
                 pausable: ERC721Pausable {

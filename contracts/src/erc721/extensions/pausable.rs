@@ -6,9 +6,9 @@ use crate::erc721::{base::ERC721Virtual, Error, TopLevelStorage};
 use crate::erc721::base::ERC721UpdateVirtual;
 
 sol_storage! {
-    pub struct ERC721Pausable<T: ERC721Virtual> {
+    pub struct ERC721Pausable<V: ERC721Virtual> {
         bool _paused;
-        PhantomData<T> _phantom_data;
+        PhantomData<V> _phantom_data;
     }
 }
 
@@ -29,7 +29,7 @@ sol! {
 }
 
 #[external]
-impl<T: ERC721Virtual> ERC721Pausable<T> {
+impl<V: ERC721Virtual> ERC721Pausable<V> {
     /// ERC-721 Pausable implementation
     /// ERC-721 token with pausable token transfers, minting and burning.
 
@@ -58,25 +58,25 @@ impl<T: ERC721Virtual> ERC721Pausable<T> {
     }
 }
 
-// TODO#q: should we add derive with auto implementation ERC721Virtual?
-pub struct ERC721PausableOverride<T: ERC721Virtual>(PhantomData<T>);
+// TODO#q: derive with auto implementation ERC721Virtual
+pub struct ERC721PausableOverride<V: ERC721Virtual>(V);
 
-impl<T: ERC721Virtual> ERC721Virtual for ERC721PausableOverride<T> {
-    type Update = ERC721PausableUpdateOverride<T::Update>;
+impl<V: ERC721Virtual> ERC721Virtual for ERC721PausableOverride<V> {
+    type Update = ERC721PausableUpdateOverride<V::Update>;
 }
 
-pub struct ERC721PausableUpdateOverride<T: ERC721UpdateVirtual>(PhantomData<T>);
+pub struct ERC721PausableUpdateOverride<V: ERC721UpdateVirtual>(V);
 
 impl<Base: ERC721UpdateVirtual> ERC721UpdateVirtual for ERC721PausableUpdateOverride<Base> {
-    fn call<This: ERC721Virtual>(
+    fn call<V: ERC721Virtual>(
         storage: &mut impl TopLevelStorage,
         to: Address,
         token_id: U256,
         auth: Address,
     ) -> Result<Address, Error> {
-        let pausable: &mut ERC721Pausable<This> = storage.get_storage();
+        let pausable: &mut ERC721Pausable<V> = storage.get_storage();
         pausable.require_not_paused()?;
-        Base::call::<This>(storage, to, token_id, auth)
+        Base::call::<V>(storage, to, token_id, auth)
     }
 }
 
