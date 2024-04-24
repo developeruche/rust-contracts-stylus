@@ -13,6 +13,7 @@ use contracts::erc721::{
     Error,
 };
 use stylus_sdk::{alloy_sol_types::sol, evm, prelude::*};
+use contracts_proc::*;
 
 type Override = NoWayOverride<
     ERC721BurnableOverride<ERC721PausableOverride<ERC721BaseOverride>>,
@@ -56,13 +57,36 @@ impl NoWayNft {
     }
 }
 
-pub struct NoWayOverride<V: ERC721Virtual>(V);
+// pub struct NoWayOverride<V: ERC721Virtual>(V);
+// 
+// impl<Base: ERC721Virtual> ERC721Virtual for NoWayOverride<Base> {
+//     type Update = NoWayUpdateOverride<Base::Update>;
+// }
+// 
+// pub struct NoWayUpdateOverride<V: ERC721UpdateVirtual>(V);
+// 
+// impl<Base: ERC721UpdateVirtual> ERC721UpdateVirtual
+//     for NoWayUpdateOverride<Base>
+// {
+//     fn call<V: ERC721Virtual>(
+//         storage: &mut impl TopLevelStorage,
+//         to: Address,
+//         token_id: U256,
+//         auth: Address,
+//     ) -> Result<Address, Error> {
+//         let storage: &mut NoWayNft = storage.inner_mut();
+//         if storage.is_there_a_way() {
+//             evm::log(ThereIsWay {});
+//             Base::call::<V>(storage, to, token_id, auth)
+//         } else {
+//             Err(Error::Custom(NoWay {}.into()))
+//         }
+//     }
+// }
 
-impl<Base: ERC721Virtual> ERC721Virtual for NoWayOverride<Base> {
-    type Update = NoWayUpdateOverride<Base::Update>;
-}
-
-pub struct NoWayUpdateOverride<V: ERC721UpdateVirtual>(V);
+#[derive(ERC721Virtual)]
+#[update(NoWayUpdateOverride)]
+pub struct NoWayOverride<Base: ERC721Virtual>(Base);
 
 impl<Base: ERC721UpdateVirtual> ERC721UpdateVirtual
     for NoWayUpdateOverride<Base>
