@@ -85,7 +85,7 @@ impl NoWayNft {
 // }
 
 #[derive(ERC721Virtual)]
-#[update(NoWayUpdateOverride)]
+#[set(Update = NoWayUpdateOverride)]
 pub struct NoWayOverride<Base: ERC721Virtual>(Base);
 
 impl<Base: ERC721UpdateVirtual> ERC721UpdateVirtual

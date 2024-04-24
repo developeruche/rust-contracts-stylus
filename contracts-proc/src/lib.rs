@@ -14,23 +14,24 @@ use syn::{
 };
 
 
-#[proc_macro_derive(ERC721Virtual)]
+#[proc_macro_derive(ERC721Virtual, attributes(set))]
 pub fn erc721_virtual_derive(input: TokenStream) -> TokenStream {
     let mut input = parse_macro_input!(input as DeriveInput);
     // let mut input = parse_macro_input!(input as ItemImpl);
     let name = &input.ident;
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
-    // let mut inherits = vec![];
+    let mut upd_types = vec![];
     for attr in mem::take(&mut input.attrs) {
-        if !attr.path().is_ident("update") {
+        if !attr.path().is_ident("set") {
             input.attrs.push(attr);
             continue;
         }
-        let contents: Type = match attr.parse_args() {
+        let upd_type: Type = match attr.parse_args() {
             Ok(contents) => contents,
             Err(err) => return proc_macro::TokenStream::from(err.to_compile_error()),
         };
+        upd_types.push(upd_type);
         // contents.
         // for ty in contents.types {
         //     inherits.push(ty);
@@ -38,11 +39,19 @@ pub fn erc721_virtual_derive(input: TokenStream) -> TokenStream {
     }
 
     let expanded = quote! {
-        impl<#ty_generics> ERC721Virtual for #name #ty_generics #where_clause {
+        impl #impl_generics ERC721Virtual for #name #ty_generics #where_clause {
             type Update = NoWayUpdateOverride<Base::Update>;
         }
 
         pub struct NoWayUpdateOverride<V: ERC721UpdateVirtual>(V);
+
+        // #(#upd_types, )*
+
+        // impl<Base: ERC721Virtual> ERC721Virtual for NoWayOverride<Base> {
+        //     type Update = NoWayUpdateOverride<Base::Update>;
+        // }
+        //
+        // pub struct NoWayUpdateOverride<V: ERC721UpdateVirtual>(V);
     };
 
     TokenStream::from(expanded)

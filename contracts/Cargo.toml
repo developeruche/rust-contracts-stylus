@@ -17,7 +17,6 @@ stylus-proc.workspace = true
 mini-alloc.workspace = true
 derive_more = "0.99.17"
 cfg-if = "1.0"
-contracts-proc = { path = "../contracts-proc"}
 
 [dev-dependencies]
 grip = { path = "../lib/grip" }
