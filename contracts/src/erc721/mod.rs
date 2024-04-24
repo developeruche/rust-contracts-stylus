@@ -97,19 +97,7 @@ pub(crate) mod tests {
     #[inherit(ERC721Base<ERC721Override>)]
     impl ERC721 {}
 
-    unsafe impl TopLevelStorage for ERC721 {
-        fn get_storage<S: 'static>(&mut self) -> &mut S {
-            use stylus_sdk::storage::InnerStorage;
-            unsafe {
-                self.try_get_storage().unwrap_or_else(|| {
-                    panic!(
-                        "storage for type doesn't exist - type name is {}",
-                        core::any::type_name::<S>()
-                    )
-                })
-            }
-        }
-    }
+    unsafe impl TopLevelStorage for ERC721 {}
 
     impl Default for ERC721 {
         fn default() -> Self {

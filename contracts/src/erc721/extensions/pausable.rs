@@ -74,7 +74,7 @@ impl<Base: ERC721UpdateVirtual> ERC721UpdateVirtual for ERC721PausableUpdateOver
         token_id: U256,
         auth: Address,
     ) -> Result<Address, Error> {
-        let pausable: &mut ERC721Pausable<V> = storage.get_storage();
+        let pausable: &mut ERC721Pausable<V> = storage.inner_mut();
         pausable.require_not_paused()?;
         Base::call::<V>(storage, to, token_id, auth)
     }
@@ -102,7 +102,7 @@ pub(crate) mod tests {
         ERC721Base::<ERC721Override>::_mint(storage, *ALICE, token_id)
             .expect("mint a token to Alice");
 
-        let pausable: &mut ERC721Pausable<ERC721Override> = storage.get_storage();
+        let pausable: &mut ERC721Pausable<ERC721Override> = storage.inner_mut();
         pausable.pause();
         let paused = pausable.paused();
         assert!(paused);

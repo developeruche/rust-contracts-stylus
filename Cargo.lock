@@ -133,7 +133,7 @@ dependencies = [
  "mini-alloc",
  "once_cell",
  "rand",
- "stylus-proc 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "stylus-proc",
  "stylus-sdk",
 ]
 
@@ -233,7 +233,7 @@ dependencies = [
  "alloy-primitives 0.3.3",
  "contracts",
  "mini-alloc",
- "stylus-proc 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "stylus-proc",
  "stylus-sdk",
 ]
 
@@ -245,7 +245,7 @@ dependencies = [
  "alloy-sol-types",
  "contracts",
  "mini-alloc",
- "stylus-proc 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "stylus-proc",
  "stylus-sdk",
 ]
 
@@ -558,26 +558,7 @@ dependencies = [
 [[package]]
 name = "stylus-proc"
 version = "0.4.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "366c3323b03fc99c7d0124cec4eee10e37a226a14b08829a416feec9f2ebb641"
-dependencies = [
- "alloy-primitives 0.3.3",
- "alloy-sol-types",
- "cfg-if 1.0.0",
- "convert_case 0.6.0",
- "lazy_static",
- "proc-macro2",
- "quote",
- "regex",
- "sha3",
- "syn 1.0.109",
- "syn-solidity",
-]
-
-[[package]]
-name = "stylus-proc"
-version = "0.4.3"
-source = "git+https://github.com/qalisander/stylus-sdk-rs?branch=patch-0.4.3-dependency-injection-for-toplevelstorage#8c655e89c0ee6afd24a82dd38eb2b9d7cd1998c1"
+source = "git+https://github.com/qalisander/stylus-sdk-rs?branch=toplevelstorage-dependency-injection#f671452f168c17db3a3aad96484a2af6b69b2591"
 dependencies = [
  "alloy-primitives 0.3.3",
  "alloy-sol-types",
@@ -595,7 +576,7 @@ dependencies = [
 [[package]]
 name = "stylus-sdk"
 version = "0.4.3"
-source = "git+https://github.com/qalisander/stylus-sdk-rs?branch=patch-0.4.3-dependency-injection-for-toplevelstorage#8c655e89c0ee6afd24a82dd38eb2b9d7cd1998c1"
+source = "git+https://github.com/qalisander/stylus-sdk-rs?branch=toplevelstorage-dependency-injection#f671452f168c17db3a3aad96484a2af6b69b2591"
 dependencies = [
  "alloy-primitives 0.3.3",
  "alloy-sol-types",
@@ -604,7 +585,7 @@ dependencies = [
  "hex",
  "keccak-const",
  "lazy_static",
- "stylus-proc 0.4.3 (git+https://github.com/qalisander/stylus-sdk-rs?branch=patch-0.4.3-dependency-injection-for-toplevelstorage)",
+ "stylus-proc",
 ]
 
 [[package]]

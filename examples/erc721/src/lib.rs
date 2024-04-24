@@ -32,11 +32,8 @@ sol_storage! {
     struct NoWayNft {
         bool _is_there_a_way;
 
-        #[borrow]
         ERC721Base<Override> erc721;
-        #[borrow]
         ERC721Burnable<Override> burnable;
-        #[borrow]
         ERC721Pausable<Override> pausable;
     }
 }
@@ -76,7 +73,7 @@ impl<Base: ERC721UpdateVirtual> ERC721UpdateVirtual
         token_id: U256,
         auth: Address,
     ) -> Result<Address, Error> {
-        let storage: &mut NoWayNft = storage.get_storage();
+        let storage: &mut NoWayNft = storage.inner_mut();
         if storage.is_there_a_way() {
             evm::log(ThereIsWay {});
             Base::call::<V>(storage, to, token_id, auth)

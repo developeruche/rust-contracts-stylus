@@ -118,18 +118,6 @@ sol_storage! {
     }
 }
 
-// impl<V: ERC721Virtual> Storage for ERC721Base<V>{
-//     fn try_get_storage<S: 'static>(&mut self) -> Option<&mut S> {
-//         use std::any::TypeId;
-//         let this = if TypeId::of::<S>() == TypeId::of::<Self>() {
-//             Some(unsafe { core::mem::transmute::<_, _>(self) })
-//         } else {
-//             None
-//         };
-//         this
-//     }
-// }
-
 #[external]
 impl<V: ERC721Virtual> ERC721Base<V> {
     /// Returns the number of tokens in `owner`'s account.
@@ -508,7 +496,7 @@ impl ERC721UpdateVirtual for ERC721BaseUpdateOverride {
         token_id: U256,
         auth: Address,
     ) -> Result<Address, Error> {
-        let storage: &mut ERC721Base<V> = storage.get_storage();
+        let storage: &mut ERC721Base<V> = storage.inner_mut();
         let from = storage._owner_of_inner(token_id);
 
         // Perform (optional) operator check.
