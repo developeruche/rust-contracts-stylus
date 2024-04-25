@@ -84,6 +84,7 @@ impl NoWayNft {
 //     }
 // }
 
+// NOTE: all those macros should be saved in proc-macro
 #[derive(ERC721Virtual)]
 #[set(Update = NoWayUpdateOverride)]
 pub struct NoWayOverride<Base: ERC721Virtual>(Base);
