@@ -7,8 +7,8 @@ use base::{
     ERC721InvalidOperator, ERC721InvalidOwner, ERC721InvalidReceiver,
     ERC721InvalidSender, ERC721NonexistentToken,
 };
-use extensions::pausable::{EnforcedPause, ExpectedPause};
 use stylus_sdk::{call::MethodError, prelude::*};
+use crate::utils::pausable::{EnforcedPause, ExpectedPause};
 
 /// An ERC-721 error defined as described in [ERC-6093].
 ///
@@ -73,6 +73,7 @@ pub(crate) mod tests {
             pausable::{ERC721Pausable, ERC721PausableOverride},
         },
     };
+    use crate::utils::pausable::Pausable;
 
     pub(crate) type ERC721Override = inherit!(
         ERC721BurnableOverride,
@@ -116,9 +117,11 @@ pub(crate) mod tests {
                 },
                 burnable: ERC721Burnable { _phantom_data: PhantomData },
                 pausable: ERC721Pausable {
-                    _paused: unsafe {
-                        // TODO: what should be size of bool with alignment?
-                        StorageBool::new(root + U256::from(128), 0)
+                    pausable: Pausable {
+                        _paused: unsafe {
+                            // TODO: what should be size of bool with alignment?
+                            StorageBool::new(root + U256::from(128), 0)
+                        },
                     },
                     _phantom_data: PhantomData,
                 },
