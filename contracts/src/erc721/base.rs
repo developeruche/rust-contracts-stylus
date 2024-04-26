@@ -1,9 +1,9 @@
 use core::marker::PhantomData;
 use alloy_primitives::{fixed_bytes, Address, FixedBytes, U128, U256};
+use contracts_proc::ERC721Virtual;
 use stylus_sdk::{
     abi::Bytes, alloy_sol_types::sol, call::Call, evm, msg, prelude::*, storage,
 };
-use contracts_proc::ERC721Virtual;
 use super::{Error, TopLevelStorage};
 use crate::arithmetic::{AddAssignUnchecked, SubAssignUnchecked};
 
@@ -323,7 +323,8 @@ impl<V: ERC721Virtual> ERC721Base<V> {
         // Setting an "auth" argument enables the `_is_authorized` check which
         // verifies that the token exists (`from != 0`). Therefore, it is
         // not needed to verify that the return value is not 0 here.
-        let previous_owner = V::Update::call::<V>(storage, to, token_id, msg::sender())?;
+        let previous_owner =
+            V::Update::call::<V>(storage, to, token_id, msg::sender())?;
         if previous_owner != from {
             return Err(ERC721IncorrectOwner {
                 sender: from,
@@ -363,11 +364,11 @@ impl<V: ERC721Virtual> ERC721Base<V> {
     ///
     /// Emits an [`Approval`] event.
     pub fn approve(
-        &mut self,
+        storage: &mut impl TopLevelStorage,
         to: Address,
         token_id: U256,
     ) -> Result<(), Error> {
-        self._approve(to, token_id, msg::sender(), true)
+        V::Approve::call::<V>(storage, to, token_id, msg::sender(), true)
     }
 
     /// Approve or remove `operator` as an operator for the caller.
@@ -443,11 +444,13 @@ impl<V: ERC721Virtual> ERC721Base<V> {
 pub trait ERC721Virtual: 'static {
     type Update: ERC721UpdateVirtual;
     type SafeTransfer: ERC721SafeTransferVirtual;
+    type Approve: ERC721ApproveVirtual;
 }
 
 #[derive(ERC721Virtual)]
 #[set(Update = ERC721BaseUpdateOverride)]
 #[set(SafeTransfer = ERC721SafeTransferOverride)]
+#[set(Approve = ERC721ApproveOverride)]
 pub struct ERC721BaseOverride;
 
 pub trait ERC721UpdateVirtual {
@@ -495,25 +498,27 @@ impl ERC721UpdateVirtual for ERC721BaseUpdateOverride {
         token_id: U256,
         auth: Address,
     ) -> Result<Address, Error> {
-        let storage: &mut ERC721Base<V> = storage.inner_mut();
-        let from = storage._owner_of_inner(token_id);
+        let base: &ERC721Base<V> = storage.inner();
+        let from = base._owner_of_inner(token_id);
 
         // Perform (optional) operator check.
         if !auth.is_zero() {
-            storage._check_authorized(from, auth, token_id)?;
+            base._check_authorized(from, auth, token_id)?;
         }
 
         // Execute the update.
         if !from.is_zero() {
             // Clear approval. No need to re-authorize or emit the Approval
             // event.
-            storage._approve(
+            V::Approve::call::<V>(
+                storage,
                 Address::ZERO,
                 token_id,
                 Address::ZERO,
                 false,
             )?;
             storage
+                .inner_mut::<ERC721Base<V>>()
                 ._balances
                 .setter(from)
                 .sub_assign_unchecked(U256::from(1));
@@ -521,12 +526,13 @@ impl ERC721UpdateVirtual for ERC721BaseUpdateOverride {
 
         if !to.is_zero() {
             storage
+                .inner_mut::<ERC721Base<V>>()
                 ._balances
                 .setter(to)
                 .add_assign_unchecked(U256::from(1));
         }
 
-        storage._owners.setter(token_id).set(to);
+        storage.inner_mut::<ERC721Base<V>>()._owners.setter(token_id).set(to);
 
         evm::log(Transfer { from, to, token_id });
 
@@ -534,7 +540,7 @@ impl ERC721UpdateVirtual for ERC721BaseUpdateOverride {
     }
 }
 
-pub trait ERC721SafeTransferVirtual{
+pub trait ERC721SafeTransferVirtual {
     /// Safely transfers `tokenId` token from `from` to `to`, checking that
     /// contract recipients are aware of the ERC-721 standard to prevent
     /// tokens from being forever locked.
@@ -586,7 +592,13 @@ pub trait ERC721SafeTransferVirtual{
 }
 
 impl ERC721SafeTransferVirtual for ERC721SafeTransferOverride {
-    fn call<V: ERC721Virtual>(storage: &mut impl TopLevelStorage, from: Address, to: Address, token_id: U256, data: Bytes) -> Result<(), Error> {
+    fn call<V: ERC721Virtual>(
+        storage: &mut impl TopLevelStorage,
+        from: Address,
+        to: Address,
+        token_id: U256,
+        data: Bytes,
+    ) -> Result<(), Error> {
         ERC721Base::<V>::_transfer(storage, from, to, token_id)?;
         ERC721Base::<V>::_check_on_erc721_received(
             storage,
@@ -596,6 +608,70 @@ impl ERC721SafeTransferVirtual for ERC721SafeTransferOverride {
             token_id,
             data,
         )
+    }
+}
+
+pub trait ERC721ApproveVirtual {
+    /// Variant of `approve_inner` with an optional flag to enable or disable
+    /// the [`Approval`] event. The event is not emitted in the context of
+    /// transfers.
+    ///
+    /// # Arguments
+    ///
+    /// * `&mut self` - Write access to the contract's state.
+    /// * `to` - Account of the recipient.
+    /// * `token_id` - Token id as a number.
+    /// * `auth` - Account used for authorization of the update.
+    /// * `emit_event` - Emit an [`Approval`] event flag.
+    ///
+    /// # Errors
+    ///
+    /// * If the token does not exist then [`Error::NonexistentToken`] is
+    ///   returned.
+    /// * If `auth` does not have a right to approve this token then
+    ///   [`Error::InvalidApprover`] is returned.
+    ///
+    /// # Events
+    ///
+    /// Emits an [`Approval`] event.
+    fn call<V: ERC721Virtual>(
+        storage: &mut impl TopLevelStorage,
+        to: Address,
+        token_id: U256,
+        auth: Address,
+        emit_event: bool,
+    ) -> Result<(), Error>;
+}
+
+impl ERC721ApproveVirtual for ERC721ApproveOverride {
+    fn call<V: ERC721Virtual>(
+        storage: &mut impl TopLevelStorage,
+        to: Address,
+        token_id: U256,
+        auth: Address,
+        emit_event: bool,
+    ) -> Result<(), Error> {
+        let storage: &mut ERC721Base<V> = storage.inner_mut();
+        // Avoid reading the owner unless necessary.
+        if emit_event || !auth.is_zero() {
+            let owner = storage._require_owned(token_id)?;
+
+            // We do not use [`Self::_is_authorized`] because single-token
+            // approvals should not be able to call `approve`.
+            if !auth.is_zero()
+                && owner != auth
+                && !storage.is_approved_for_all(owner, auth)
+            {
+                return Err(ERC721InvalidApprover { approver: auth }.into());
+            }
+
+            if emit_event {
+                evm::log(Approval { owner, approved: to, token_id });
+            }
+        }
+
+        storage._token_approvals.setter(token_id).set(to);
+        Ok(())
     }
 }
 
@@ -752,7 +828,8 @@ impl<V: ERC721Virtual> ERC721Base<V> {
             );
         }
 
-        let previous_owner = V::Update::call::<V>(storage, to, token_id, Address::ZERO)?;
+        let previous_owner =
+            V::Update::call::<V>(storage, to, token_id, Address::ZERO)?;
         if !previous_owner.is_zero() {
             return Err(ERC721InvalidSender { sender: Address::ZERO }.into());
         }
@@ -835,8 +912,12 @@ impl<V: ERC721Virtual> ERC721Base<V> {
         storage: &mut impl TopLevelStorage,
         token_id: U256,
     ) -> Result<(), Error> {
-        let previous_owner =
-            V::Update::call::<V>(storage, Address::ZERO, token_id, Address::ZERO)?;
+        let previous_owner = V::Update::call::<V>(
+            storage,
+            Address::ZERO,
+            token_id,
+            Address::ZERO,
+        )?;
         if previous_owner.is_zero() {
             Err(ERC721NonexistentToken { token_id }.into())
         } else {
@@ -885,7 +966,8 @@ impl<V: ERC721Virtual> ERC721Base<V> {
             );
         }
 
-        let previous_owner = V::Update::call::<V>(storage, to, token_id, Address::ZERO)?;
+        let previous_owner =
+            V::Update::call::<V>(storage, to, token_id, Address::ZERO)?;
         if previous_owner.is_zero() {
             Err(ERC721NonexistentToken { token_id }.into())
         } else if previous_owner != from {
@@ -898,57 +980,6 @@ impl<V: ERC721Virtual> ERC721Base<V> {
         } else {
             Ok(())
         }
-    }
-
-    /// Variant of `approve_inner` with an optional flag to enable or disable
-    /// the [`Approval`] event. The event is not emitted in the context of
-    /// transfers.
-    ///
-    /// # Arguments
-    ///
-    /// * `&mut self` - Write access to the contract's state.
-    /// * `to` - Account of the recipient.
-    /// * `token_id` - Token id as a number.
-    /// * `auth` - Account used for authorization of the update.
-    /// * `emit_event` - Emit an [`Approval`] event flag.
-    ///
-    /// # Errors
-    ///
-    /// * If the token does not exist then [`Error::NonexistentToken`] is
-    ///   returned.
-    /// * If `auth` does not have a right to approve this token then
-    ///   [`Error::InvalidApprover`] is returned.
-    ///
-    /// # Events
-    ///
-    /// Emits an [`Approval`] event.
-    pub fn _approve(
-        &mut self,
-        to: Address,
-        token_id: U256,
-        auth: Address,
-        emit_event: bool,
-    ) -> Result<(), Error> {
-        // Avoid reading the owner unless necessary.
-        if emit_event || !auth.is_zero() {
-            let owner = self._require_owned(token_id)?;
-
-            // We do not use [`Self::_is_authorized`] because single-token
-            // approvals should not be able to call `approve`.
-            if !auth.is_zero()
-                && owner != auth
-                && !self.is_approved_for_all(owner, auth)
-            {
-                return Err(ERC721InvalidApprover { approver: auth }.into());
-            }
-
-            if emit_event {
-                evm::log(Approval { owner, approved: to, token_id });
-            }
-        }
-
-        self._token_approvals.setter(token_id).set(to);
-        Ok(())
     }
 
     /// Approve `operator` to operate on all of `owner`'s tokens.
@@ -1073,7 +1104,7 @@ pub mod tests {
     use once_cell::sync::Lazy;
 
     use super::*;
-    use crate::erc721::{tests::{random_token_id, ERC721, ERC721Override}};
+    use crate::erc721::tests::{random_token_id, ERC721Override, ERC721};
 
     // NOTE: Alice is always the sender of the message
     static ALICE: Lazy<Address> = Lazy::new(msg::sender);
@@ -1104,8 +1135,9 @@ pub mod tests {
         let token_id = random_token_id();
         ERC721Base::<ERC721Override>::_mint(storage, *ALICE, token_id)
             .expect("mint the token a first time");
-        let err = ERC721Base::<ERC721Override>::_mint(storage, *ALICE, token_id)
-            .expect_err("should not mint a token id twice");
+        let err =
+            ERC721Base::<ERC721Override>::_mint(storage, *ALICE, token_id)
+                .expect_err("should not mint a token id twice");
         assert!(matches!(
             err,
             Error::InvalidSender(ERC721InvalidSender { sender: Address::ZERO })
@@ -1117,8 +1149,10 @@ pub mod tests {
         let token_id = random_token_id();
         ERC721Base::<ERC721Override>::_mint(storage, *ALICE, token_id)
             .expect("mint a token to Alice");
-        ERC721Base::<ERC721Override>::transfer_from(storage, *ALICE, BOB, token_id)
-            .expect("transfer from Alice to Bob");
+        ERC721Base::<ERC721Override>::transfer_from(
+            storage, *ALICE, BOB, token_id,
+        )
+        .expect("transfer from Alice to Bob");
         let owner = storage
             .erc721
             .owner_of(token_id)
@@ -1129,8 +1163,10 @@ pub mod tests {
     #[grip::test]
     fn error_when_transfer_nonexistent_token(storage: ERC721) {
         let token_id = random_token_id();
-        let err = ERC721Base::<ERC721Override>::transfer_from(storage, *ALICE, BOB, token_id)
-            .expect_err("should not transfer a non existent token");
+        let err = ERC721Base::<ERC721Override>::transfer_from(
+            storage, *ALICE, BOB, token_id,
+        )
+        .expect_err("should not transfer a non existent token");
         assert!(matches!(
             err,
             Error::NonexistentToken(ERC721NonexistentToken {
@@ -1142,10 +1178,9 @@ pub mod tests {
     #[grip::test]
     fn approve_token_transfer(storage: ERC721) {
         let token_id = random_token_id();
-        ERC721Base::<ERC721Override>::_mint(storage, *ALICE, token_id).expect("mint token");
-        storage
-            .erc721
-            .approve(BOB, token_id)
+        ERC721Base::<ERC721Override>::_mint(storage, *ALICE, token_id)
+            .expect("mint token");
+        ERC721Base::<ERC721Override>::approve(storage, BOB, token_id)
             .expect("approve bob for operations on token");
         assert_eq!(storage.erc721._token_approvals.get(token_id), BOB);
     }
@@ -1153,10 +1188,13 @@ pub mod tests {
     #[grip::test]
     fn transfer_approved_token(storage: ERC721) {
         let token_id = random_token_id();
-        ERC721Base::<ERC721Override>::_mint(storage, BOB, token_id).expect("mint token to Bob");
+        ERC721Base::<ERC721Override>::_mint(storage, BOB, token_id)
+            .expect("mint token to Bob");
         storage.erc721._token_approvals.setter(token_id).set(*ALICE);
-        ERC721Base::<ERC721Override>::transfer_from(storage, BOB, *ALICE, token_id)
-            .expect("transfer Bob's token to Alice");
+        ERC721Base::<ERC721Override>::transfer_from(
+            storage, BOB, *ALICE, token_id,
+        )
+        .expect("transfer Bob's token to Alice");
         let owner = storage
             .erc721
             .owner_of(token_id)
@@ -1167,9 +1205,12 @@ pub mod tests {
     #[grip::test]
     fn error_when_transfer_unapproved_token(storage: ERC721) {
         let token_id = random_token_id();
-        ERC721Base::<ERC721Override>::_mint(storage, BOB, token_id).expect("mint token to Bob");
-        let err = ERC721Base::<ERC721Override>::transfer_from(storage, BOB, *ALICE, token_id)
-            .expect_err("should not transfer unapproved token");
+        ERC721Base::<ERC721Override>::_mint(storage, BOB, token_id)
+            .expect("mint token to Bob");
+        let err = ERC721Base::<ERC721Override>::transfer_from(
+            storage, BOB, *ALICE, token_id,
+        )
+        .expect_err("should not transfer unapproved token");
         assert!(matches!(
             err,
             Error::InsufficientApproval(ERC721InsufficientApproval {

@@ -8,6 +8,7 @@ use base::{
     ERC721InvalidSender, ERC721NonexistentToken,
 };
 use stylus_sdk::{call::MethodError, prelude::*};
+use crate::utils::pausable;
 use crate::utils::pausable::{EnforcedPause, ExpectedPause};
 
 /// An ERC-721 error defined as described in [ERC-6093].
@@ -54,6 +55,16 @@ impl MethodError for ERC721CustomError {
 impl<T: SolError> From<T> for ERC721CustomError {
     fn from(value: T) -> Self {
         ERC721CustomError(value.encode())
+    }
+}
+
+// NOTE: error mappings could be optimised (e.g. this_error)
+impl From<pausable::Error> for Error {
+    fn from(value: pausable::Error) -> Self {
+        match value {
+            pausable::Error::EnforcedPause(e) => Error::EnforcedPause(e),
+            pausable::Error::ExpectedPause(e) => Error::ExpectedPause(e),
+        }
     }
 }
 

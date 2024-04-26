@@ -1,15 +1,16 @@
 use core::marker::PhantomData;
 
 use alloy_primitives::Address;
+use stylus_sdk::{alloy_primitives::U256, msg, prelude::*};
+
 use contracts_proc::ERC721Virtual;
-use stylus_sdk::{alloy_primitives::U256, evm, msg, prelude::*};
 
 use crate::{
     erc721::{
         base::{ERC721UpdateVirtual, ERC721Virtual},
         Error, TopLevelStorage,
     },
-    utils::{pausable::Pausable, pausable},
+    utils::pausable::Pausable,
 };
 
 sol_storage! {
@@ -42,27 +43,18 @@ impl<Base: ERC721UpdateVirtual> ERC721UpdateVirtual
     }
 }
 
-// NOTE: error mappings could be optimised (e.g. this_error)
-impl From<pausable::Error> for Error {
-    fn from(value: pausable::Error) -> Self {
-        match value {
-            pausable::Error::EnforcedPause(e) => Error::EnforcedPause(e),
-            pausable::Error::ExpectedPause(e) => Error::ExpectedPause(e),
-        }
-    }
-}
-
 #[cfg(all(test, feature = "std"))]
 pub(crate) mod tests {
     use alloy_primitives::address;
     use once_cell::sync::Lazy;
 
-    use super::*;
     use crate::erc721::{
-        base::{ERC721Base},
-        tests::{random_token_id, ERC721Override, ERC721},
+        base::ERC721Base,
+        tests::{ERC721, ERC721Override, random_token_id},
         TopLevelStorage,
     };
+
+    use super::*;
 
     static ALICE: Lazy<Address> = Lazy::new(msg::sender);
 
