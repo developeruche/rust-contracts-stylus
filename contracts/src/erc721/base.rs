@@ -440,14 +440,14 @@ impl<V: ERC721Virtual> ERC721Base<V> {
     }
 }
 
-
-// TODO#q: add _mint and _transfer
 pub trait ERC721Virtual: 'static {
     type Update: ERC721UpdateVirtual;
+    type SafeTransfer: ERC721SafeTransferVirtual;
 }
 
 #[derive(ERC721Virtual)]
 #[set(Update = ERC721BaseUpdateOverride)]
+#[set(SafeTransfer = ERC721SafeTransferOverride)]
 pub struct ERC721BaseOverride;
 
 pub trait ERC721UpdateVirtual {
@@ -531,6 +531,71 @@ impl ERC721UpdateVirtual for ERC721BaseUpdateOverride {
         evm::log(Transfer { from, to, token_id });
 
         Ok(from)
+    }
+}
+
+pub trait ERC721SafeTransferVirtual{
+    /// Safely transfers `tokenId` token from `from` to `to`, checking that
+    /// contract recipients are aware of the ERC-721 standard to prevent
+    /// tokens from being forever locked.
+    ///
+    /// `data` is additional data, it has
+    /// no specified format and it is sent in call to `to`. This internal
+    /// function is like [`Self::safe_transfer_from`] in the sense that it
+    /// invokes [`IERC721Receiver::on_erc_721_received`] on the receiver,
+    /// and can be used to e.g. implement alternative mechanisms to perform
+    /// token transfer, such as signature-based.
+    ///
+    /// # Arguments
+    ///
+    /// * `&mut self` - Write access to the contract's state.
+    /// * `from` - Account of the sender.
+    /// * `to` - Account of the recipient.
+    /// * `token_id` - Token id as a number.
+    /// * `data` - Additional data with no specified format, sent in the call to
+    ///   [`Self::_check_on_erc721_received`].
+    ///
+    /// # Errors
+    ///
+    /// * If `to` is `Address::ZERO` then [`Error::InvalidReceiver`] is
+    ///   returned.
+    /// * If `token_id` does not exist then [`Error::ERC721NonexistentToken`] is
+    ///   returned.
+    /// * If the previous owner is not `from` then [`Error::IncorrectOwner`] is
+    ///   returned.
+    ///
+    /// # Requirements:
+    ///
+    /// * The `tokenId` token must exist and be owned by `from`.
+    /// * `to` cannot be the zero address.
+    /// * `from` cannot be the zero address.
+    /// * If `to` refers to a smart contract, it must implement
+    ///   [`IERC721Receiver::on_erc_721_received`], which is called upon a safe
+    ///   transfer.
+    ///
+    /// # Events
+    ///
+    /// Emits a [`Transfer`] event.
+    fn call<V: ERC721Virtual>(
+        storage: &mut impl TopLevelStorage,
+        from: Address,
+        to: Address,
+        token_id: U256,
+        data: Bytes,
+    ) -> Result<(), Error>;
+}
+
+impl ERC721SafeTransferVirtual for ERC721SafeTransferOverride {
+    fn call<V: ERC721Virtual>(storage: &mut impl TopLevelStorage, from: Address, to: Address, token_id: U256, data: Bytes) -> Result<(), Error> {
+        ERC721Base::<V>::_transfer(storage, from, to, token_id)?;
+        ERC721Base::<V>::_check_on_erc721_received(
+            storage,
+            msg::sender(),
+            from,
+            to,
+            token_id,
+            data,
+        )
     }
 }
 
@@ -833,65 +898,6 @@ impl<V: ERC721Virtual> ERC721Base<V> {
         } else {
             Ok(())
         }
-    }
-
-    /// Safely transfers `tokenId` token from `from` to `to`, checking that
-    /// contract recipients are aware of the ERC-721 standard to prevent
-    /// tokens from being forever locked.
-    ///
-    /// `data` is additional data, it has
-    /// no specified format and it is sent in call to `to`. This internal
-    /// function is like [`Self::safe_transfer_from`] in the sense that it
-    /// invokes [`IERC721Receiver::on_erc_721_received`] on the receiver,
-    /// and can be used to e.g. implement alternative mechanisms to perform
-    /// token transfer, such as signature-based.
-    ///
-    /// # Arguments
-    ///
-    /// * `&mut self` - Write access to the contract's state.
-    /// * `from` - Account of the sender.
-    /// * `to` - Account of the recipient.
-    /// * `token_id` - Token id as a number.
-    /// * `data` - Additional data with no specified format, sent in the call to
-    ///   [`Self::_check_on_erc721_received`].
-    ///
-    /// # Errors
-    ///
-    /// * If `to` is `Address::ZERO` then [`Error::InvalidReceiver`] is
-    ///   returned.
-    /// * If `token_id` does not exist then [`Error::ERC721NonexistentToken`] is
-    ///   returned.
-    /// * If the previous owner is not `from` then [`Error::IncorrectOwner`] is
-    ///   returned.
-    ///
-    /// # Requirements:
-    ///
-    /// * The `tokenId` token must exist and be owned by `from`.
-    /// * `to` cannot be the zero address.
-    /// * `from` cannot be the zero address.
-    /// * If `to` refers to a smart contract, it must implement
-    ///   [`IERC721Receiver::on_erc_721_received`], which is called upon a safe
-    ///   transfer.
-    ///
-    /// # Events
-    ///
-    /// Emits a [`Transfer`] event.
-    pub fn _safe_transfer(
-        storage: &mut impl TopLevelStorage,
-        from: Address,
-        to: Address,
-        token_id: U256,
-        data: Bytes,
-    ) -> Result<(), Error> {
-        Self::_transfer(storage, from, to, token_id)?;
-        Self::_check_on_erc721_received(
-            storage,
-            msg::sender(),
-            from,
-            to,
-            token_id,
-            data,
-        )
     }
 
     /// Variant of `approve_inner` with an optional flag to enable or disable
