@@ -57,34 +57,6 @@ impl NoWayNft {
     }
 }
 
-// pub struct NoWayOverride<V: ERC721Virtual>(V);
-// 
-// impl<Base: ERC721Virtual> ERC721Virtual for NoWayOverride<Base> {
-//     type Update = NoWayUpdateOverride<Base::Update>;
-// }
-// 
-// pub struct NoWayUpdateOverride<V: ERC721UpdateVirtual>(V);
-// 
-// impl<Base: ERC721UpdateVirtual> ERC721UpdateVirtual
-//     for NoWayUpdateOverride<Base>
-// {
-//     fn call<V: ERC721Virtual>(
-//         storage: &mut impl TopLevelStorage,
-//         to: Address,
-//         token_id: U256,
-//         auth: Address,
-//     ) -> Result<Address, Error> {
-//         let storage: &mut NoWayNft = storage.inner_mut();
-//         if storage.is_there_a_way() {
-//             evm::log(ThereIsWay {});
-//             Base::call::<V>(storage, to, token_id, auth)
-//         } else {
-//             Err(Error::Custom(NoWay {}.into()))
-//         }
-//     }
-// }
-
-// NOTE: all those macros should be saved in proc-macro
 #[derive(ERC721Virtual)]
 #[set(Update = NoWayUpdateOverride)]
 pub struct NoWayOverride<Base: ERC721Virtual>(Base);

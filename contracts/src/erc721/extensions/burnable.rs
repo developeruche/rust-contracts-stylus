@@ -1,6 +1,7 @@
 use core::marker::PhantomData;
 use alloy_primitives::Address;
 use stylus_sdk::{alloy_primitives::U256, msg, prelude::*};
+use contracts_proc::ERC721Virtual;
 use crate::erc721::{base::{ERC721UpdateVirtual, ERC721Virtual}, Error, TopLevelStorage};
 
 sol_storage! {
@@ -20,8 +21,5 @@ impl<V: ERC721Virtual> ERC721Burnable<V> {
     }
 }
 
+#[derive(ERC721Virtual)]
 pub struct ERC721BurnableOverride<V: ERC721Virtual>(V);
-
-impl<Base: ERC721Virtual> ERC721Virtual for ERC721BurnableOverride<Base> {
-    type Update = Base::Update;
-}

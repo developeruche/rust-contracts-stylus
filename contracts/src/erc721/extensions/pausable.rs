@@ -2,6 +2,7 @@ use core::marker::PhantomData;
 use alloy_primitives::Address;
 use alloy_sol_types::sol;
 use stylus_sdk::{alloy_primitives::U256, evm, msg, prelude::*};
+use contracts_proc::ERC721Virtual;
 use crate::erc721::{base::ERC721Virtual, Error, TopLevelStorage};
 use crate::erc721::base::ERC721UpdateVirtual;
 
@@ -58,14 +59,9 @@ impl<V: ERC721Virtual> ERC721Pausable<V> {
     }
 }
 
-// TODO#q: derive with auto implementation ERC721Virtual
+#[derive(ERC721Virtual)]
+#[set(Update = ERC721PausableUpdateOverride)]
 pub struct ERC721PausableOverride<V: ERC721Virtual>(V);
-
-impl<Base: ERC721Virtual> ERC721Virtual for ERC721PausableOverride<Base> {
-    type Update = ERC721PausableUpdateOverride<Base::Update>;
-}
-
-pub struct ERC721PausableUpdateOverride<V: ERC721UpdateVirtual>(V);
 
 impl<Base: ERC721UpdateVirtual> ERC721UpdateVirtual for ERC721PausableUpdateOverride<Base> {
     fn call<V: ERC721Virtual>(
