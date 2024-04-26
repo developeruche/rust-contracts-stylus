@@ -12,12 +12,8 @@ use contracts::erc721::{
     },
     Error,
 };
-use stylus_sdk::{alloy_sol_types::sol, evm, prelude::*};
 use contracts_proc::*;
-
-type Override = NoWayOverride<
-    ERC721BurnableOverride<ERC721PausableOverride<ERC721BaseOverride>>,
->;
+use stylus_sdk::{alloy_sol_types::sol, evm, prelude::*};
 
 sol! {
     /// Emitted when life is not doomed and there is a way.
@@ -27,6 +23,13 @@ sol! {
     #[derive(Debug)]
     error NoWay();
 }
+
+type Override = inherit!(
+    NoWayOverride,
+    ERC721BurnableOverride,
+    ERC721PausableOverride,
+    ERC721BaseOverride
+);
 
 sol_storage! {
     #[entrypoint]

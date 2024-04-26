@@ -569,6 +569,7 @@ dependencies = [
 [[package]]
 name = "stylus-proc"
 version = "0.4.3"
+source = "git+https://github.com/qalisander/stylus-sdk-rs?branch=toplevelstorage-dependency-injection#f671452f168c17db3a3aad96484a2af6b69b2591"
 dependencies = [
  "alloy-primitives 0.3.3",
  "alloy-sol-types",
@@ -586,6 +587,7 @@ dependencies = [
 [[package]]
 name = "stylus-sdk"
 version = "0.4.3"
+source = "git+https://github.com/qalisander/stylus-sdk-rs?branch=toplevelstorage-dependency-injection#f671452f168c17db3a3aad96484a2af6b69b2591"
 dependencies = [
  "alloy-primitives 0.3.3",
  "alloy-sol-types",

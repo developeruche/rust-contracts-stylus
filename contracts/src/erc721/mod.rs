@@ -2,14 +2,13 @@ pub mod base;
 pub mod extensions;
 
 use alloy_sol_types::{SolError, SolType};
-use stylus_sdk::call::MethodError;
 use base::{
     ERC721IncorrectOwner, ERC721InsufficientApproval, ERC721InvalidApprover,
     ERC721InvalidOperator, ERC721InvalidOwner, ERC721InvalidReceiver,
     ERC721InvalidSender, ERC721NonexistentToken,
 };
 use extensions::pausable::{EnforcedPause, ExpectedPause};
-use stylus_sdk::prelude::*;
+use stylus_sdk::{call::MethodError, prelude::*};
 
 /// An ERC-721 error defined as described in [ERC-6093].
 ///
@@ -40,7 +39,7 @@ pub enum Error {
     EnforcedPause(EnforcedPause),
     ExpectedPause(ExpectedPause),
     /// Let to return custom user error from overridden function
-    Custom(ERC721CustomError)
+    Custom(ERC721CustomError),
 }
 
 #[derive(Debug)]
@@ -58,12 +57,12 @@ impl<T: SolError> From<T> for ERC721CustomError {
     }
 }
 
-
 #[cfg(all(test, feature = "std"))]
 pub(crate) mod tests {
     use core::marker::PhantomData;
 
     use alloy_primitives::U256;
+    use contracts_proc::inherit;
     use stylus_sdk::storage::{StorageBool, StorageMap};
 
     use super::*;
@@ -75,18 +74,16 @@ pub(crate) mod tests {
         },
     };
 
-    // TODO#q: create macro that generates this type from the list of types
-    // (in case there are many long generic types)  
-    pub(crate) type ERC721Override =
-        ERC721BurnableOverride<ERC721PausableOverride<ERC721BaseOverride>>;
+    pub(crate) type ERC721Override = inherit!(
+        ERC721BurnableOverride,
+        ERC721PausableOverride,
+        ERC721BaseOverride
+    );
 
     sol_storage! {
         pub struct ERC721 {
-            #[borrow]
             ERC721Base<ERC721Override> erc721;
-            #[borrow]
             ERC721Burnable<ERC721Override> burnable;
-            #[borrow]
             ERC721Pausable<ERC721Override> pausable;
         }
     }

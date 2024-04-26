@@ -27,7 +27,7 @@ pub fn derive_virtual(input: TokenStream, call_traits: &[(&str, &str)]) -> Token
         let upd_type: SetAttr = match attr.parse_args() {
             Ok(contents) => contents,
             Err(err) => {
-                return proc_macro::TokenStream::from(err.to_compile_error())
+                return err.to_compile_error().into();
             }
         };
         set_attrs.push(upd_type);
@@ -81,7 +81,7 @@ pub fn derive_virtual(input: TokenStream, call_traits: &[(&str, &str)]) -> Token
         #(#struct_overrides)*
     };
 
-    TokenStream::from(expanded)
+    expanded.into()
 }
 
 struct SetAttr {
