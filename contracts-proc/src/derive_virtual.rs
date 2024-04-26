@@ -8,14 +8,15 @@ use syn::punctuated::Punctuated;
 pub fn derive_virtual(input: TokenStream, call_traits: &[(&str, &str)]) -> TokenStream{
     let mut input = parse_macro_input!(input as DeriveInput);
     let name = &input.ident;
-    if input.generics.params.len() != 1 {
-        panic!("override type should have a single generic param");
+    if input.generics.params.len() > 1 {
+        panic!("override type should have no more then a single generic param");
     }
+    let is_base = input.generics.params.is_empty();
     let (impl_generics, ty_generics, where_clause) =
         input.generics.split_for_impl();
-    let Data::Struct(DataStruct { fields: Fields::Unnamed(_), .. }) = input.data else {
+    let Data::Struct(DataStruct { fields: Fields::Unnamed(_) | Fields::Unit, .. }) = input.data else {
         panic!("override type should be a tuple struct")
-    };
+    };    
 
     let mut set_attrs = vec![];
     for attr in mem::take(&mut input.attrs) {
@@ -42,14 +43,22 @@ pub fn derive_virtual(input: TokenStream, call_traits: &[(&str, &str)]) -> Token
             let call_name: proc_macro2::TokenStream =
                 call_name.parse().unwrap();
 
-            if let Some(SetAttr { call_path, override_path }) = matched_set_attr
-            {
-                quote! {
-                    type #call_name = #override_path<#ty_generics::#call_name>;
+            match matched_set_attr {
+                Some(SetAttr { call_path, override_path }) if is_base => {
+                    quote! {
+                        type #call_name = #override_path;
+                    }
                 }
-            } else {
-                quote! {
-                    type #call_name = #ty_generics::#call_name;
+                _ if is_base => panic!("base override should `set` every call"),
+                Some(SetAttr { call_path, override_path }) => {
+                    quote! {
+                        type #call_name = #override_path<#ty_generics::#call_name>;
+                    }
+                }
+                None => {
+                    quote! {
+                        type #call_name = #ty_generics::#call_name;
+                    }
                 }
             }
         })
@@ -61,15 +70,18 @@ pub fn derive_virtual(input: TokenStream, call_traits: &[(&str, &str)]) -> Token
             let matched_call_trait = call_traits
                 .iter()
                 .find(|&(call_name, trait_name)| call_path.is_ident(call_name));
-            if let Some(&(call_name, trait_name)) = matched_call_trait {
-                let trait_name: proc_macro2::TokenStream =
-                    trait_name.parse().unwrap();
-                Some(quote! {
-                    pub struct #override_path<Base: #trait_name>(Base);
-                })
+            let &(_call_name, trait_name) = matched_call_trait?;
+            let struct_declaration = if is_base {
+                quote! {
+                    pub struct #override_path;
+                }
             } else {
-                None
-            }
+                let trait_name: proc_macro2::TokenStream = trait_name.parse().unwrap();
+                quote! {
+                    pub struct #override_path<Base: #trait_name>(Base);
+                }
+            };
+            Some(struct_declaration)
         })
         .collect();
 

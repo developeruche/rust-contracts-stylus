@@ -3,6 +3,7 @@ use alloy_primitives::{fixed_bytes, Address, FixedBytes, U128, U256};
 use stylus_sdk::{
     abi::Bytes, alloy_sol_types::sol, call::Call, evm, msg, prelude::*, storage,
 };
+use contracts_proc::ERC721Virtual;
 use super::{Error, TopLevelStorage};
 use crate::arithmetic::{AddAssignUnchecked, SubAssignUnchecked};
 
@@ -439,15 +440,15 @@ impl<V: ERC721Virtual> ERC721Base<V> {
     }
 }
 
+
+// TODO#q: add _mint and _transfer
 pub trait ERC721Virtual: 'static {
     type Update: ERC721UpdateVirtual;
 }
 
+#[derive(ERC721Virtual)]
+#[set(Update = ERC721BaseUpdateOverride)]
 pub struct ERC721BaseOverride;
-
-impl ERC721Virtual for ERC721BaseOverride {
-    type Update = ERC721BaseUpdateOverride;
-}
 
 pub trait ERC721UpdateVirtual {
     /// Transfers `token_id` from its current owner to `to`, or alternatively
@@ -486,8 +487,6 @@ pub trait ERC721UpdateVirtual {
         auth: Address,
     ) -> Result<Address, Error>;
 }
-
-pub struct ERC721BaseUpdateOverride;
 
 impl ERC721UpdateVirtual for ERC721BaseUpdateOverride {
     fn call<V: ERC721Virtual>(
