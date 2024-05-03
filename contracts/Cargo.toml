@@ -33,6 +33,7 @@ alloy-contract = { git = "https://github.com/alloy-rs/alloy", rev = "5f74d4e", d
 alloy-rpc-types = { git = "https://github.com/alloy-rs/alloy", rev = "5f74d4e", default-features = false }
 alloy-provider = { git = "https://github.com/alloy-rs/alloy", rev = "5f74d4e", default-features = false, features = [
   "hyper",
+  "reqwest",
 ] }
 alloy-signer = { git = "https://github.com/alloy-rs/alloy", rev = "5f74d4e" }
 alloy-signer-wallet = { git = "https://github.com/alloy-rs/alloy", rev = "5f74d4e" }

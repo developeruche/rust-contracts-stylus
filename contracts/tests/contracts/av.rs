@@ -52,11 +52,13 @@ async fn spawns_anvil() {
     let alice = LocalWallet::random();
     let from = alice.address();
 
-    let rpc_url = node.http_endpoint().parse().unwrap();
+    // let rpc_url = node.http_endpoint().parse().unwrap();
+    let rpc_url = STYLUS_RPC_URL.parse().unwrap();
     let provider = ProviderBuilder::new()
         .with_recommended_fillers()
         .signer(EthereumSigner::from(alice))
-        .on_hyper_http(rpc_url)
+        // .on_hyper_http(rpc_url)
+        .on_http(rpc_url)
         .unwrap();
     // let provider = ProviderBuilder::new().on_hyper_http(rpc_url).unwrap();
 
